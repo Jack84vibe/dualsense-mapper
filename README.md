@@ -11,9 +11,21 @@ aiming, and full lighting control. Portable — no installer, no autostart.
 Close the app and the controller instantly goes back to being an ordinary gamepad,
 so it does not interfere with actually playing games.
 
-Built for desktop use and chat typing rather than gaming: the original motivation
-was driving a Windows desktop from the couch, with voice dictation bound to the
-mic-mute button.
+## What it's actually good for
+
+The setup that motivated this: driving an AI coding assistant — Claude, ChatGPT, whatever you use — without reaching for a keyboard or a mouse.
+
+- **Mic-mute button** → `Win+H`, Windows' built-in dictation. Think it, say it,
+  it lands in the chat box.
+- **Left stick** → pointer, with an adjustable acceleration curve
+- **Touchpad** → tap to click, two-finger scroll through a long answer,
+  pinch to zoom, edge strip for volume
+- **Face buttons** → Enter, Escape, copy, paste, switch window, go back
+
+None of this is AI-specific. The program sends ordinary keyboard and mouse
+events, so it behaves identically against a browser, an editor, or a terminal —
+and there is no integration to break when a tool redesigns its UI. Every
+binding above is just a default you can change.
 
 ## Requirements
 
@@ -199,8 +211,20 @@ The portable build bundles a Python runtime and third-party libraries
 免安装（portable），不开机自启 —— 关掉程序，手柄立刻恢复成普通手柄，
 不影响正常打游戏。
 
-定位是日常桌面操作和聊天打字，不是打游戏：最初的动机是从沙发上操作
-Windows 桌面，语音输入绑在麦克风静音键上。
+## 它实际上适合拿来干什么
+
+做这个东西的起因：**操作 AI 编程助手** —— Claude、ChatGPT，
+或者你在用的任何一个 —— 全程不碰键盘和鼠标。
+
+- **麦克风静音键** → `Win+H`，Windows 自带的语音输入。想到什么说出来，
+  文字直接落进聊天框
+- **左摇杆** → 指针，加速曲线可调
+- **触摸板** → 轻点即点击、双指滚动翻长回答、捏合缩放、边缘滑条调音量
+- **面板按键** → 回车、Esc、复制、粘贴、切窗口、后退
+
+这里面没有任何一项是「AI 专用」的。程序发出去的就是普通的键盘鼠标事件，
+所以对浏览器、编辑器、终端的行为完全一样 —— 也就没有「某个工具改版之后
+集成就坏掉」这回事。上面每一个绑定都只是默认值，随你改。
 
 ## 环境需求
 
