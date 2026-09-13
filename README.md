@@ -173,6 +173,18 @@ constant, then delete the script. Do not accumulate historical reports.
 - Brightness control (Windows has no universal hotkey for it)
 - Tray icon
 
+## License
+
+**GNU General Public License v3.0** — see [LICENSE](./LICENSE).
+
+In short: you are free to use, study, modify and redistribute this software.
+If you distribute a modified version, you must release your changes under the
+GPL as well, with source available. This is deliberate — the project is meant
+to stay open.
+
+The portable build bundles a Python runtime and third-party libraries
+(pywebview, Pillow, hidapi and others), each of which keeps its own license.
+
 ---
 
 # 中文说明
@@ -334,3 +346,14 @@ cmd.exe 遇到语法错误不报错、不提示、直接静默退出，用户看
 - 宏序列（后端能执行，UI 没有编辑器入口）
 - 亮度调节（Windows 没有通用快捷键）
 - 托盘图标
+
+## 授权
+
+**GNU General Public License v3.0** —— 见 [LICENSE](./LICENSE)。
+
+简单说：你可以自由使用、研究、修改、再分发这个程序。
+但如果你把改过的版本分发出去，**你的改动也必须以 GPL 开源、附上源码**。
+这是刻意选的 —— 这个项目希望保持开放。
+
+免安装包里打包了 Python 运行时和第三方库（pywebview、Pillow、hidapi 等），
+它们各自保留自己的授权条款。
