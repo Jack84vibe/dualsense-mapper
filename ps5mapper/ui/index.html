@@ -1,0 +1,1869 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DualSense 映射台</title>
+<style>
+:root{
+  --ground:#0A0B0E;
+  --surface:#131519;
+  --raised:#1B1E25;
+  --raised-2:#22262F;
+  --line:#272B34;
+  --line-soft:#1E222A;
+  --ink:#E9EBEF;
+  --ink-dim:#A8AEBC;
+  --muted:#7E8593;
+  --faint:#565C69;
+  --accent:#5B9DFF;
+  --accent-dim:#2F5A96;
+  --warn:#D9A441;
+  --ok:#5FBF8F;
+  --font:"Segoe UI Variable Text","Segoe UI","Microsoft YaHei UI","Microsoft YaHei",system-ui,sans-serif;
+  --mono:"Cascadia Mono","Consolas",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:var(--ground);
+  color:var(--ink);
+  font-family:var(--font);
+  font-weight:300;
+  font-size:14px;
+  line-height:1.55;
+  -webkit-font-smoothing:antialiased;
+}
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
+
+/* ---------- shell ---------- */
+.app{display:grid;grid-template-columns:212px minmax(0,1fr);min-height:100vh}
+
+.side{
+  background:var(--surface);
+  border-right:1px solid var(--line);
+  display:flex;flex-direction:column;
+  padding:20px 0 14px;
+  position:sticky;top:0;height:100vh;
+}
+.brand{padding:0 20px 22px;display:flex;flex-direction:column;gap:3px}
+.brand b{font-weight:500;font-size:14.5px;letter-spacing:.02em}
+.brand span{font-family:var(--mono);font-size:10.5px;color:var(--faint);letter-spacing:.06em}
+
+.nav{display:flex;flex-direction:column;gap:1px;padding:0 10px}
+.nav button{
+  display:flex;align-items:center;gap:10px;
+  padding:8px 10px;border-radius:5px;
+  color:var(--muted);font-size:13.5px;text-align:left;width:100%;
+  transition:background .12s,color .12s;
+}
+.nav button:hover{background:var(--raised);color:var(--ink-dim)}
+.nav button[aria-current="true"]{background:var(--raised-2);color:var(--ink);font-weight:400}
+.nav svg{width:15px;height:15px;flex:none;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+
+.side-foot{margin-top:auto;padding:14px 20px 0;border-top:1px solid var(--line-soft);display:flex;flex-direction:column;gap:9px}
+.state{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--ok);flex:none;box-shadow:0 0 0 3px rgba(95,191,143,.13)}
+.dot.off{background:var(--faint);box-shadow:none}
+
+/* master switch */
+.master{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12.5px;color:var(--ink-dim)}
+.sw{width:34px;height:19px;border-radius:10px;background:var(--raised-2);border:1px solid var(--line);position:relative;flex:none;transition:background .15s,border-color .15s}
+.sw::after{content:"";position:absolute;top:2px;left:2px;width:13px;height:13px;border-radius:50%;background:var(--faint);transition:transform .16s,background .16s}
+.sw[aria-pressed="true"]{background:var(--accent-dim);border-color:var(--accent-dim)}
+.sw[aria-pressed="true"]::after{transform:translateX(15px);background:var(--accent)}
+
+/* ---------- main ---------- */
+.main{padding:26px 34px 60px;max-width:1180px}
+.head{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin-bottom:22px;flex-wrap:wrap}
+h1{font-size:19px;font-weight:500;margin:0 0 3px;letter-spacing:.01em}
+.head p{margin:0;color:var(--muted);font-size:12.5px;max-width:56ch}
+
+.profile-pick{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted)}
+select,input[type=text]{
+  background:var(--raised);border:1px solid var(--line);color:var(--ink);
+  padding:6px 10px;border-radius:5px;font:inherit;font-size:13px;
+}
+select{cursor:pointer}
+
+.page{display:none}
+.page[data-active]{display:block}
+
+/* ---------- mapping stage ---------- */
+.stage{
+  position:relative;
+  display:grid;grid-template-columns:1fr 500px 1fr;
+  gap:0;align-items:stretch;
+  background:var(--surface);
+  border:1px solid var(--line);border-radius:10px;
+  padding:26px 22px;
+  background-image:radial-gradient(circle at 1px 1px, rgba(255,255,255,.028) 1px, transparent 0);
+  background-size:22px 22px;
+  min-height:560px;
+}
+.wires{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
+.wire{stroke:var(--line);stroke-width:1;fill:none}
+.wire.hot{stroke:var(--accent);stroke-width:1.4}
+.wire-dot{fill:var(--faint)}
+.wire-dot.hot{fill:var(--accent)}
+
+.col{display:flex;flex-direction:column;justify-content:space-around;z-index:2}
+.col.l{align-items:flex-start}
+.col.r{align-items:flex-end}
+
+.tag{
+  display:flex;flex-direction:column;gap:1px;
+  padding:5px 9px;border-radius:6px;
+  border:1px solid transparent;
+  max-width:210px;cursor:pointer;
+  transition:background .12s,border-color .12s;
+}
+.col.r .tag{align-items:flex-end;text-align:right}
+.tag:hover,.tag.hot{background:var(--raised);border-color:var(--line)}
+.tag .k{font-family:var(--mono);font-size:10px;letter-spacing:.09em;color:var(--faint);text-transform:uppercase}
+.tag .v{font-size:13.5px;color:var(--ink);font-weight:400;display:flex;align-items:center;gap:6px}
+.col.r .tag .v{flex-direction:row-reverse}
+.tag.unset .v{color:var(--faint);font-weight:300}
+.tag .v em{font-style:normal;font-family:var(--mono);font-size:11.5px;color:var(--accent);background:rgba(91,157,255,.09);border:1px solid rgba(91,157,255,.2);padding:0 5px;border-radius:3px}
+.flag{width:5px;height:5px;border-radius:50%;background:var(--warn);flex:none}
+
+.pad-wrap{display:flex;align-items:center;justify-content:center;z-index:2}
+#pad{width:100%;max-width:500px;height:auto}
+#pad .body{fill:#101318;stroke:#333846;stroke-width:1.5}
+#pad .ctl{fill:#1D212A;stroke:#3A4050;stroke-width:1.4;cursor:pointer;transition:fill .12s,stroke .12s}
+#pad .ctl.hot{fill:#25344B;stroke:var(--accent)}
+#pad .glyph{fill:none;stroke:#6E778A;stroke-width:1.5;pointer-events:none}
+#pad .lbl{fill:#5A6274;font-family:var(--mono);font-size:9px;pointer-events:none;letter-spacing:.05em}
+#pad .hit{fill:transparent;cursor:pointer}
+
+/* ---------- editor popover ---------- */
+.editor{
+  position:absolute;z-index:30;width:286px;
+  background:var(--raised);border:1px solid #333A48;border-radius:9px;
+  box-shadow:0 16px 44px rgba(0,0,0,.62);
+  padding:13px 14px 12px;
+  display:none;
+  max-height:calc(100% - 24px);
+  overflow-y:auto;
+}
+.editor[data-open]{display:block}
+.editor h3{margin:0 0 2px;font-size:13.5px;font-weight:500}
+.editor .sub{margin:0 0 11px;font-size:11.5px;color:var(--muted)}
+.now{
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+  background:var(--ground);border:1px solid var(--line);border-radius:6px;
+  padding:8px 10px;margin-bottom:11px;
+}
+.now span{font-size:13px}
+.now .clear{font-size:11.5px;color:var(--muted)}
+.now .clear:hover{color:var(--warn)}
+
+.grp{margin-bottom:10px}
+.grp>p{margin:0 0 5px;font-family:var(--mono);font-size:9.5px;letter-spacing:.11em;color:var(--faint);text-transform:uppercase}
+.chips{display:flex;flex-wrap:wrap;gap:5px}
+.chip{
+  border:1px solid var(--line);background:var(--surface);
+  padding:4px 9px;border-radius:5px;font-size:12.5px;color:var(--ink-dim);
+  transition:border-color .12s,color .12s,background .12s;
+}
+.chip:hover{border-color:var(--accent-dim);color:var(--ink);background:var(--raised-2)}
+.chip.on{border-color:var(--accent);color:var(--accent);background:rgba(91,157,255,.08)}
+
+.rec{
+  width:100%;border:1px dashed #3B4252;border-radius:6px;
+  padding:11px;text-align:center;font-size:12.5px;color:var(--muted);
+  font-family:var(--mono);letter-spacing:.03em;transition:border-color .14s,color .14s;
+}
+.rec:hover{border-color:var(--accent-dim);color:var(--ink-dim)}
+.rec.live{border-color:var(--accent);border-style:solid;color:var(--accent);background:rgba(91,157,255,.06)}
+
+.editor-foot{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:12px;padding-top:10px;border-top:1px solid var(--line-soft)}
+.btn{border:1px solid var(--line);border-radius:5px;padding:5px 12px;font-size:12.5px;color:var(--ink-dim)}
+.btn:hover{border-color:#3D4553;color:var(--ink)}
+.btn.pri{background:var(--accent-dim);border-color:var(--accent-dim);color:#EAF2FF}
+.btn.pri:hover{background:#376AAF;border-color:#376AAF}
+
+/* ---------- generic cards / rows ---------- */
+.cards{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(258px,1fr))}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px 17px}
+.card h2{margin:0 0 3px;font-size:13.5px;font-weight:500}
+.card .hint{margin:0 0 13px;font-size:11.5px;color:var(--muted)}
+
+.row{display:flex;align-items:center;justify-content:space-between;gap:8px 14px;padding:9px 0;border-bottom:1px solid var(--line-soft);flex-wrap:wrap}
+.row:last-child{border-bottom:none}
+/* min-width 是关键：不给下限的话，遇到取色器这种宽控件标签会被压成一列单字 */
+.row .lab{display:flex;flex-direction:column;gap:1px;min-width:150px;flex:1 1 150px}
+.row .lab b{font-weight:400;font-size:13px}
+.row .lab small{color:var(--muted);font-size:11.5px;line-height:1.4}
+.row .ctlbox{display:flex;align-items:center;gap:9px;flex:0 1 auto;min-width:0;
+  max-width:100%;flex-wrap:wrap;justify-content:flex-end}
+
+.val{font-family:var(--mono);font-size:12px;color:var(--accent);min-width:46px;text-align:right;font-variant-numeric:tabular-nums}
+input[type=range]{-webkit-appearance:none;appearance:none;width:132px;height:3px;background:var(--raised-2);border-radius:2px;outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:var(--accent);cursor:pointer;border:2px solid var(--surface)}
+input[type=range]::-moz-range-thumb{width:11px;height:11px;border-radius:50%;background:var(--accent);cursor:pointer;border:2px solid var(--surface)}
+
+.seg{display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.seg button{padding:4px 11px;font-size:12.5px;color:var(--muted);transition:background .12s,color .12s}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button.on{background:var(--raised-2);color:var(--ink)}
+
+.note{
+  display:flex;gap:9px;background:rgba(217,164,65,.06);
+  border:1px solid rgba(217,164,65,.22);border-radius:8px;padding:11px 13px;
+  font-size:12.5px;color:#D7C79E;line-height:1.55;
+}
+.note b{color:var(--warn);font-weight:500}
+
+/* trigger viz */
+.tviz{margin:6px 0 14px}
+.tbar{position:relative;height:30px;background:var(--ground);border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.tfill{position:absolute;inset:0 auto 0 0;background:linear-gradient(90deg,rgba(91,157,255,.05),rgba(91,157,255,.22));width:0}
+.twall{position:absolute;top:0;bottom:0;background:rgba(217,164,65,.20);border-left:2px solid var(--warn);border-right:1px dashed rgba(217,164,65,.5)}
+.twall.b{background:rgba(91,157,255,.18);border-left-color:var(--accent);border-right-color:rgba(91,157,255,.5)}
+.tfire{position:absolute;top:0;bottom:0;width:3px;background:var(--ok);box-shadow:0 0 10px rgba(95,191,143,.7)}
+.tfire::after{content:"触发";position:absolute;left:4px;top:1px;font-family:var(--mono);font-size:8.5px;color:var(--ok);white-space:nowrap}
+.tfire.b::after{content:"触发2"}
+.tlegend{display:flex;gap:14px;font-family:var(--mono);font-size:9.5px;color:var(--faint);margin-top:5px}
+.tlegend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+.cpick{display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.cpick input[type=color]{width:46px;height:28px;padding:0;border:1px solid var(--line);border-radius:6px;background:var(--ground);cursor:pointer}
+.cpick .hex{font-family:var(--mono);font-size:11px;color:var(--faint);min-width:64px}
+.swatches{display:flex;gap:6px;flex-wrap:wrap}
+.swatches button{width:20px;height:20px;border-radius:5px;border:1px solid rgba(255,255,255,.14);cursor:pointer;padding:0}
+.swatches button:hover{transform:scale(1.15)}
+.flashlist{display:flex;flex-direction:column;gap:2px;margin:2px 0 4px}
+.flashlist .fl{display:flex;align-items:center;gap:10px;padding:6px 8px;border-radius:7px;background:var(--ground)}
+.flashlist .fl.on{outline:1px solid var(--accent-dim)}
+.flashlist .fl b{font-weight:400;font-size:12.5px;flex:1 1 auto;min-width:0;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.flashlist .fl .now{font-size:10.5px;color:var(--accent);font-family:var(--mono);border:none;background:none;padding:0;flex:none}
+.flashlist .fl input[type=color]{width:38px;height:24px;padding:0;border:1px solid var(--line);border-radius:5px;background:var(--ground);cursor:pointer;flex:none}
+.batlegend{display:flex;flex-direction:column;gap:5px;margin:2px 0 10px}
+.batlegend .bl{display:flex;align-items:center;gap:9px;font-size:11.5px;color:var(--muted)}
+/* 手柄上这排灯不是均匀排布的：中间三颗挨得更紧，最外侧两颗离得远。
+   图例照着实物画，不然对照的时候会以为自己数错了。 */
+.batlegend .dots{display:flex;gap:3px;flex:none}
+.batlegend i:first-child{margin-right:3px}
+.batlegend i:last-child{margin-left:3px}
+.batlegend i{width:9px;height:9px;border-radius:50%;border:1px solid var(--line);background:transparent}
+.batlegend i.on{background:#EDEFF3;border-color:#EDEFF3}
+.batlegend i.blink{background:repeating-linear-gradient(45deg,#EDEFF3 0 2px,transparent 2px 4px);border-color:var(--muted)}
+.lbprev{height:26px;border-radius:6px;border:1px solid var(--line);margin:2px 0 10px;transition:background .2s linear}
+.tscale{display:flex;justify-content:space-between;font-family:var(--mono);font-size:9.5px;color:var(--faint);margin-top:4px}
+
+.pill{font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;padding:2px 7px;border-radius:20px;border:1px solid var(--line);color:var(--muted)}
+.pill.ok{color:var(--ok);border-color:rgba(95,191,143,.3);background:rgba(95,191,143,.07)}
+.pill.warn{color:var(--warn);border-color:rgba(217,164,65,.3);background:rgba(217,164,65,.07)}
+
+.plist{display:flex;flex-direction:column;gap:8px}
+.pitem{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:11px 14px;cursor:pointer;transition:border-color .12s}
+.pitem:hover{border-color:#39414F}
+.pitem.on{border-color:var(--accent-dim);background:var(--raised)}
+.pitem .n{display:flex;flex-direction:column;gap:1px}
+.pitem .n b{font-weight:400;font-size:13.5px}
+.pitem .n small{color:var(--muted);font-size:11.5px}
+.pitem .n{min-width:0;flex:1 1 auto}
+.pitem .n b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pitem .rename{font:inherit;font-size:13.5px;color:var(--ink);background:var(--ground);border:1px solid var(--accent-dim);border-radius:5px;padding:2px 6px;width:100%;max-width:220px}
+
+.curve{background:var(--ground);border:1px solid var(--line);border-radius:6px;display:block;width:100%;height:78px}
+
+@media (max-width:1080px){
+  .stage{grid-template-columns:1fr}
+  .wires{display:none}
+  .col{flex-direction:row;flex-wrap:wrap;gap:6px;justify-content:flex-start;margin:12px 0}
+  .col.r{align-items:flex-start}
+  .col.r .tag{align-items:flex-start;text-align:left}
+  .col.r .tag .v{flex-direction:row}
+  .tag{border-color:var(--line);background:var(--raised)}
+}
+@media (max-width:760px){
+  .app{grid-template-columns:1fr}
+  .side{position:static;height:auto;flex-direction:column}
+  .main{padding:20px 16px 50px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+<style>
+#pad .ctl.live{fill:#2E4A72;stroke:#7FB6FF}
+.livebar{position:absolute;inset:0 auto 0 0;background:linear-gradient(90deg,rgba(91,157,255,.06),rgba(91,157,255,.30));width:0;transition:width .05s linear}
+.subrow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 9px;border:1px solid var(--line);border-radius:6px;background:var(--surface);cursor:pointer;font-size:12.5px;color:var(--ink)}
+.subrow:hover{border-color:var(--accent-dim)}
+.subrow span:last-child{color:var(--muted)}
+.subrow.unset span:last-child{color:var(--faint)}
+.back{font-size:11.5px;color:var(--muted);margin-bottom:8px;display:inline-block}
+.back:hover{color:var(--ink)}
+.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:var(--raised);border:1px solid var(--line);border-radius:8px;padding:9px 16px;font-size:13px;box-shadow:0 10px 30px rgba(0,0,0,.55);opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:99}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(-4px)}
+.empty{color:var(--faint);font-size:12.5px;padding:8px 0}
+.iconbtn{color:var(--muted);font-size:11.5px;padding:3px 9px;border:1px solid var(--line);border-radius:5px}
+.iconbtn:hover{color:var(--warn);border-color:rgba(217,164,65,.4)}
+body{user-select:none;overflow-x:hidden}
+::-webkit-scrollbar{width:9px;height:9px}
+::-webkit-scrollbar-thumb{background:#2B303B;border-radius:5px}
+::-webkit-scrollbar-track{background:transparent}
+</style>
+</head>
+<script src="i18n.js"></script>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="brand"><b>DualSense 映射台</b><span id="verline" data-dyn>v1.0</span></div>
+    <nav class="nav" id="nav">
+      <button data-go="map" aria-current="true"><svg viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="12" rx="4"/><path d="M8 11v4M6 13h4M16 12.5h.01M18 15h.01"/></svg><span>按键映射</span></button>
+      <button data-go="trig"><svg viewBox="0 0 24 24"><path d="M4 18V9a5 5 0 0 1 5-5h6a5 5 0 0 1 5 5v9"/><path d="M9 13h6"/></svg><span>自适应扳机</span></button>
+      <button data-go="touch"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M8 12h8"/></svg><span>触摸板</span></button>
+      <button data-go="stick"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5"/></svg><span>摇杆与鼠标</span></button>
+      <button data-go="gyro"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="12" rx="9" ry="3.6"/><ellipse cx="12" cy="12" rx="3.6" ry="9"/><circle cx="12" cy="12" r="1.6"/></svg><span>陀螺仪</span></button>
+      <button data-go="prof"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h9"/></svg><span>配置档</span></button>
+      <button data-go="light"><svg viewBox="0 0 24 24"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9c.6.5.9 1.2.9 1.9V16h5.2v-.2c0-.7.3-1.4.9-1.9A6 6 0 0 0 12 3z"/></svg><span>灯光</span></button>
+      <button data-go="set"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg><span>设置</span></button>
+    </nav>
+    <div class="side-foot">
+      <div class="master">
+        <span id="masterLabel" data-dyn>映射已启用</span>
+        <button class="sw" id="master" aria-pressed="true" aria-label="启用或暂停映射"></button>
+      </div>
+      <div class="state"><i class="dot off" id="connDot" data-dyn></i><span id="connText" data-dyn>正在查找手柄…</span></div>
+      <div class="state"><i class="dot off"></i><span id="pauseHint" data-dyn>紧急暂停 L1+R1+触摸板</span></div>
+    </div>
+  </aside>
+
+  <main class="main">
+
+    <section class="page" data-page="map" data-active>
+      <div class="head">
+        <div>
+          <h1>按键映射</h1>
+          <p>点击任意标注文字修改绑定。手柄上按下的键会实时高亮。</p>
+        </div>
+        <div class="profile-pick">
+          <label for="prof-sel">当前配置档</label>
+          <select id="prof-sel"></select>
+        </div>
+      </div>
+
+      <div class="stage" id="stage">
+        <svg class="wires" id="wires" aria-hidden="true"></svg>
+        <div class="col l" id="colL"></div>
+        <div class="pad-wrap"><svg id="pad" viewBox="0 0 660 380" role="img" aria-label="DualSense 手柄示意图">
+            <!-- L2 / R2 sit behind the body -->
+            <rect class="ctl" id="c-l2" x="146" y="2" width="58" height="26" rx="12"/>
+            <rect class="ctl" id="c-r2" x="456" y="2" width="58" height="26" rx="12"/>
+
+            <path class="body" d="M190 46 C250 34 300 32 330 36 C360 32 410 34 470 46 C530 60 568 92 576 142 C584 198 570 244 542 288 C518 326 486 358 452 364 C424 369 406 352 398 322 C390 288 372 262 330 256 C288 262 270 288 262 322 C254 352 236 369 208 364 C174 358 142 326 118 288 C90 244 76 198 84 142 C92 92 130 60 190 46 Z"/>
+
+            <!-- L1 / R1 on the front edge -->
+            <rect class="ctl" id="c-l1" x="136" y="28" width="72" height="24" rx="12"/>
+            <rect class="ctl" id="c-r1" x="452" y="28" width="72" height="24" rx="12"/>
+            <text class="lbl" x="175" y="18" text-anchor="middle">L2</text>
+            <text class="lbl" x="485" y="18" text-anchor="middle">R2</text>
+            <text class="lbl" x="172" y="44" text-anchor="middle">L1</text>
+            <text class="lbl" x="488" y="44" text-anchor="middle">R1</text>
+
+            <!-- dpad -->
+            <g id="c-dpad">
+              <rect class="ctl" x="200" y="118" width="16" height="25" rx="4"/>
+              <rect class="ctl" x="200" y="155" width="16" height="25" rx="4"/>
+              <rect class="ctl" x="170" y="140" width="25" height="16" rx="4"/>
+              <rect class="ctl" x="221" y="140" width="25" height="16" rx="4"/>
+              <rect class="hit" x="166" y="114" width="84" height="70"/>
+            </g>
+
+            <!-- face -->
+            <circle class="ctl" id="c-tri" cx="452" cy="118" r="15"/>
+            <circle class="ctl" id="c-cir" cx="482" cy="148" r="15"/>
+            <circle class="ctl" id="c-cro" cx="452" cy="178" r="15"/>
+            <circle class="ctl" id="c-squ" cx="422" cy="148" r="15"/>
+            <path class="glyph" d="M452 112 l5.5 9.5 h-11 Z"/>
+            <circle class="glyph" cx="482" cy="148" r="5.5"/>
+            <path class="glyph" d="M448 174 l8 8 M456 174 l-8 8"/>
+            <rect class="glyph" x="417.5" y="143.5" width="9" height="9" rx="1.5"/>
+
+            <!-- touchpad -->
+            <rect class="ctl" id="c-pad" x="268" y="86" width="124" height="88" rx="10"/>
+            <text class="lbl" x="330" y="134" text-anchor="middle">TOUCHPAD</text>
+
+            <!-- create / options -->
+            <rect class="ctl" id="c-cre" x="242" y="76" width="15" height="21" rx="4"/>
+            <rect class="ctl" id="c-opt" x="403" y="76" width="15" height="21" rx="4"/>
+
+            <!-- sticks -->
+            <circle class="ctl" id="c-ls" cx="262" cy="212" r="34"/>
+            <circle class="glyph" cx="262" cy="212" r="22"/>
+            <circle class="ctl" id="c-rs" cx="398" cy="212" r="34"/>
+            <circle class="glyph" cx="398" cy="212" r="22"/>
+            <circle class="ctl" id="c-l3" cx="262" cy="212" r="13"/>
+            <circle class="ctl" id="c-r3" cx="398" cy="212" r="13"/>
+
+            <!-- ps + mic -->
+            <circle class="ctl" id="c-ps" cx="330" cy="196" r="12"/>
+            <rect class="ctl" id="c-mic" x="314" y="232" width="32" height="15" rx="7.5"/>
+            <text class="lbl" x="330" y="262" text-anchor="middle">MIC</text>
+          </svg></div>
+        <div class="col r" id="colR"></div>
+        <div class="editor" id="editor" role="dialog" aria-label="修改绑定"></div>
+      </div>
+
+      <div class="note" style="margin-top:14px" id="conflictNote">
+        <div><b>黄点 = 重复绑定。</b>两个键绑同一个功能是允许的，这里只提醒，不拦你。</div>
+      </div>
+    </section>
+
+    <section class="page" data-page="trig">
+      <div class="head">
+        <div><h1>自适应扳机</h1><p>阻力墙的位置就是触发点——按穿墙的那一刻发出按键。下面的进度条是 R2/L2 的实时按压值。</p></div>
+        <div class="profile-pick"><span>总开关</span><button class="sw" data-path="adaptive_triggers_master" aria-label="启用自适应扳机"></button></div>
+      </div>
+      <div class="cards" id="trigCards"></div>
+      <div class="note" style="margin-top:14px">
+        <div><b>耗电提醒。</b>扳机阻力长期开启会明显加快耗电，右上角总开关可以一键关掉所有效果，按键绑定不受影响。</div>
+      </div>
+    </section>
+
+    <section class="page" data-page="touch">
+      <div class="head"><div><h1>触摸板</h1><p>混合模式：手指落下不动，滑动才移动指针。物理按下是独立键位，在映射页里配。</p></div></div>
+      <div class="cards" id="touchCards"></div>
+    </section>
+
+    <section class="page" data-page="stick">
+      <div class="head"><div><h1>摇杆与鼠标</h1><p>摇杆是连续量，只能整根绑定一种用途。摇杆按下（L3/R3）是另外的键位。</p></div></div>
+      <div class="cards" id="stickCards"></div>
+    </section>
+
+    <section class="page" data-page="gyro">
+      <div class="head"><div><h1>陀螺仪</h1><p>手柄转多少度，光标走多少像素。和摇杆、触摸板<b>叠加</b>：摇杆负责大范围移动，陀螺仪负责最后的精确定位。</p></div></div>
+      <div class="cards" id="gyroCards"></div>
+    </section>
+
+    <section class="page" data-page="prof">
+      <div class="head"><div><h1>配置档</h1><p>每套配置档包含全部按键映射、扳机、触摸板和摇杆参数。每档这里设的颜色，默认是<b>切到它时闪一下的提示色</b>；在灯光页打开「跟随当前配置档」之后，它就变成这个档的常驻颜色。</p></div>
+        <button class="btn pri" id="addProf">新建配置档</button>
+      </div>
+      <div class="plist" id="profList"></div>
+    </section>
+
+    <section class="page" data-page="light">
+      <div class="head"><div><h1>灯光</h1><p>手柄上有三盏灯：彩色灯条、触摸板下方 5 个白色玩家灯、麦克风键上的橙灯。灯条没有硬件动画，呼吸是程序逐帧画出来的。</p></div></div>
+      <div class="cards" id="lightCards"></div>
+    </section>
+
+    <section class="page" data-page="set">
+      <div class="head"><div><h1>设置</h1><p>绿色免安装：配置就存在程序旁边的一个文件里，整个文件夹拷走就能换电脑用。</p></div></div>
+      <div class="cards" id="setCards"></div>
+    </section>
+
+  </main>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+"use strict";
+
+/* ============================ 与后端通信 ============================ */
+/* ============================ 界面语言 ============================
+   简体是源语言：界面代码里写的就是简体，所以简体不需要词典。
+   繁体和英文查 i18n.js（由 tools/build_i18n.py 生成）。
+
+   翻译单元的判定规则和生成脚本里那份**必须一模一样**，否则 key 对不上。
+   原文记在 data-i18n 上，所以来回切语言不会越翻越乱。 */
+var LANG = "zh-CN";
+var I18N_SEL = 'h1,h2,h3,p,small,b,span,button,option,label,div.empty,div.note>div';
+var I18N_UNITS = {   // 滑条右边那个数值的单位，内容随拖动变化，不能进词典
+  " 像素/度":" px/deg", " 度/秒":" deg/s", " 帧":" fr", " 次/秒":"/s",
+  " Hz":" Hz", " ms":" ms", "%":"%", "s":"s", "\u00b0":"\u00b0"
+};
+
+/* 注意：这个函数叫 t，而 t 是个很容易被局部变量挡住的名字。
+   renderTriggers 里原本就有个 `var t = p.triggers[id]`，在里面调 t() 会直接
+   炸成「t is not a function」—— 而且是整页渲染中断，不是少翻一句。
+   已经改名成 tg 了；以后要在某个函数里用 t()，先确认那个作用域没占用这个名字。 */
+function t(str){
+  if(LANG === "zh-CN" || !window.I18N) return str;
+  var d = window.I18N[LANG];
+  return (d && d[str] != null) ? d[str] : str;
+}
+function tUnit(u){
+  if(LANG === "zh-CN" || LANG === "zh-TW" || !u) return u;
+  return I18N_UNITS[u] != null ? I18N_UNITS[u] : u;
+}
+function i18nUnits(root){
+  var all = [].slice.call(root.querySelectorAll(I18N_SEL));
+  var cand = all.filter(function(el){
+    // 「含中文」**或者**「翻过一次」。少了后半句就有个洞：元素一旦翻成英文
+    // 就不含中文了，下次扫描直接把它漏掉 —— 于是切回中文时，导航和页头这些
+    // 原地翻译、不重新渲染的地方会永远卡在英文。卡片看着正常只是因为它们
+    // 每次都重新渲染出中文。
+    return (/[\u4e00-\u9fff]/.test(el.textContent || "") || el.hasAttribute("data-i18n"))
+      && !el.querySelector('[data-dyn],[data-rename]')
+      // 含图标的容器不当单元，让里面包文字的 <span> 顶上 ——
+      // 否则 key 会变成「一大段 SVG 路径 + 几个字」，翻译表根本没法看
+      && !el.querySelector('svg,i')
+      // 语言名永远写各自的母语，不翻译也不收进原文表
+      && !el.closest('[data-nolocalize]')
+      && !el.hasAttribute('data-dyn') && !el.hasAttribute('data-rename')
+      && !el.classList.contains('val') && !el.closest('.val')
+      && !el.querySelector('.k,.v,.pill');
+  });
+  return cand.filter(function(el){
+    return !cand.some(function(o){ return o !== el && o.contains(el); });
+  });
+}
+function localize(root){
+  if(!window.I18N) return;
+  root = root || document.body;
+  i18nUnits(root).forEach(function(el){
+    if(el.dataset.i18n === undefined) el.dataset.i18n = el.innerHTML.trim();
+    var out = t(el.dataset.i18n);
+    if(el.innerHTML.trim() !== out) el.innerHTML = out;
+  });
+  ["aria-label","placeholder","title"].forEach(function(a){
+    var key = "i18n" + a.replace(/-/g,"");
+    [].slice.call(root.querySelectorAll("[" + a + "]")).forEach(function(el){
+      if(el.dataset[key] === undefined) el.dataset[key] = el.getAttribute(a);
+      el.setAttribute(a, t(el.dataset[key]));
+    });
+  });
+  [].slice.call(root.querySelectorAll("input[type=range][data-unit]")).forEach(function(r){
+    var out = r.parentNode.querySelector(".val");
+    if(out) out.textContent = r.value + tUnit(r.dataset.unit);
+  });
+}
+
+var API = null;                 // pywebview 就绪后填上
+var CFG = null, META = {}, CONFLICTS = {};
+var DEMO = false;               // 直接用浏览器打开时进入演示模式
+
+function call(name){
+  var args = Array.prototype.slice.call(arguments,1);
+  if(!API || !API[name]) return Promise.resolve(null);
+  return API[name].apply(API, args);
+}
+function toast(msg){
+  msg = t(msg);
+  var t=document.getElementById("toast");
+  t.textContent=msg; t.classList.add("on");
+  clearTimeout(t._h); t._h=setTimeout(function(){t.classList.remove("on")},1800);
+}
+var $  = function(s,r){return (r||document).querySelector(s)};
+var $$ = function(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))};
+
+/* ============================ 控件定义 ============================ */
+var CONTROLS = [
+  {id:"l2",  el:"c-l2",  side:"l", name:"L2 扳机",     key:"L2",       trigger:true},
+  {id:"l1",  el:"c-l1",  side:"l", name:"L1",          key:"L1"},
+  {id:"create", el:"c-cre", side:"l", name:"Create",   key:"CREATE"},
+  {id:"dpad", el:"c-dpad", side:"l", name:"十字键",     key:"D-PAD",    group:["dpad_up","dpad_down","dpad_left","dpad_right"]},
+  {id:"touchpad_click", el:"c-pad", side:"l", name:"触摸板按下", key:"TOUCHPAD"},
+  {id:"left", el:"c-ls", side:"l", name:"左摇杆",       key:"L-STICK",  stick:"left"},
+  {id:"l3",  el:"c-l3",  side:"l", name:"左摇杆按下",   key:"L3"},
+  {id:"mic", el:"c-mic", side:"l", name:"麦克风键",     key:"MIC"},
+
+  {id:"r2",  el:"c-r2",  side:"r", name:"R2 扳机",     key:"R2",       trigger:true},
+  {id:"r1",  el:"c-r1",  side:"r", name:"R1",          key:"R1"},
+  {id:"options", el:"c-opt", side:"r", name:"Options", key:"OPTIONS"},
+  {id:"triangle", el:"c-tri", side:"r", name:"三角",    key:"TRIANGLE"},
+  {id:"circle", el:"c-cir", side:"r", name:"圆圈",      key:"CIRCLE"},
+  {id:"square", el:"c-squ", side:"r", name:"方块",      key:"SQUARE"},
+  {id:"cross", el:"c-cro", side:"r", name:"叉",         key:"CROSS"},
+  {id:"right", el:"c-rs", side:"r", name:"右摇杆",      key:"R-STICK", stick:"right"},
+  {id:"r3",  el:"c-r3",  side:"r", name:"右摇杆按下",   key:"R3"},
+  {id:"ps",  el:"c-ps",  side:"r", name:"PS 键",        key:"PS"}
+];
+var SVG_OF = {};   // 控件 id → SVG 元素 id（含子键）
+CONTROLS.forEach(function(c){ SVG_OF[c.id]=c.el; });
+["dpad_up","dpad_down","dpad_left","dpad_right"].forEach(function(k){ SVG_OF[k]="c-dpad"; });
+
+var STICK_MODES = [["mouse","鼠标移动"],["scroll","滚动"],["dpad","方向键"],["off","关闭"]];
+var LIB = {
+  "常用功能":[
+    {t:"语音输入", k:"Win+H"},{t:"持续听写", k:"Ctrl+Win+S"},
+    {t:"截图", k:"Win+Shift+S"},{t:"锁屏", k:"Win+L"}
+  ],
+  "鼠标":[
+    {m:"left",t:"鼠标左键"},{m:"right",t:"鼠标右键"},{m:"middle",t:"鼠标中键"},
+    {b:"double_click",t:"双击"},{b:"wheel_up",t:"滚轮上"},{b:"wheel_down",t:"滚轮下"}
+  ],
+  "编辑":[
+    {t:"复制", k:"Ctrl+C"},{t:"粘贴", k:"Ctrl+V"},{t:"剪切", k:"Ctrl+X"},
+    {t:"撤销", k:"Ctrl+Z"},{t:"全选", k:"Ctrl+A"},{t:"确认", k:"Enter"},
+    {t:"删除", k:"Delete"},{t:"退格", k:"Backspace"},{t:"退出", k:"Esc"},
+    {t:"上箭头", k:"Up"},{t:"下箭头", k:"Down"},
+    {t:"左箭头", k:"Left"},{t:"右箭头", k:"Right"}
+  ],
+  /* 中文里「上一页/下一页」有两个意思，这里都给出来、名字写死，免得选错：
+     浏览器/文件管理器里的**后退前进**是 Alt+方向键；
+     文档、网页、阅读器里的**翻一屏**是 PageUp / PageDown。*/
+  "浏览与翻页":[
+    {t:"上一页（后退）", k:"Alt+Left"},{t:"下一页（前进）", k:"Alt+Right"},
+    {t:"上翻一屏", k:"PageUp"},{t:"下翻一屏", k:"PageDown"},
+    {t:"回到顶部", k:"Ctrl+Home", r:false},{t:"跳到末尾", k:"Ctrl+End", r:false},
+    {t:"刷新", k:"F5", r:false},{t:"新标签页", k:"Ctrl+T", r:false},
+    {t:"关闭标签页", k:"Ctrl+W", r:false},{t:"切换标签页", k:"Ctrl+Tab"}
+  ],
+  /* r:false = 不连发。唤出任务视图这类动作按一次就该只发生一次，
+     长按连发会把它反复重开。*/
+  "窗口":[
+    {t:"任务视图", k:"Win+Tab", r:false},
+    {t:"常驻切窗", k:"Ctrl+Alt+Tab", r:false},
+    {t:"切换窗口", k:"Alt+Tab", r:false},
+    {t:"显示桌面", k:"Win+D", r:false},
+    {t:"贴到左半屏", k:"Win+Left", r:false},
+    {t:"贴到右半屏", k:"Win+Right", r:false},
+    {t:"最大化", k:"Win+Up", r:false},
+    {t:"最小化", k:"Win+Down", r:false},
+    {t:"上个虚拟桌面", k:"Ctrl+Win+Left", r:false},
+    {t:"下个虚拟桌面", k:"Ctrl+Win+Right", r:false}
+  ],
+  "程序内功能":[
+    {b:"pause_toggle",t:"暂停 / 恢复映射"},{b:"profile_next",t:"切换配置档"},
+    {b:"audio_switch",t:"切换默认录音设备"},{b:"slow_pointer",t:"按住时指针减速"}
+  ]
+};
+
+function profile(){ return CFG ? CFG.profiles[CFG.active_profile] : null; }
+function bindingOf(cid){
+  var p=profile(); if(!p) return null;
+  if(cid==="l2"||cid==="r2") return p.triggers[cid].binding;
+  if(cid==="l2_2"||cid==="r2_2") return p.triggers[cid.slice(0,2)].binding2;
+  return p.buttons[cid];
+}
+function labelOf(act){
+  if(!act||!act.type) return null;
+  var l = act.label || "";
+  var k = act.type==="combo" ? act.keys : null;
+  return {label:l||k||"已绑定", keys:k};
+}
+
+/* 「功能 · 快捷键」这一小段，编辑器里两个地方要用，统一在这里拼。
+   标签查表、快捷键原样、没绑就是「未绑定」—— 拼好的整句不进翻译表，
+   调用方记得给容器打 data-dyn。 */
+function bindLabel(L){ return L ? esc(t(L.label)) : esc(t("未绑定")); }
+function bindText(L){
+  return bindLabel(L) + (L && L.keys ? " · " + esc(L.keys) : "");
+}
+
+/* ============================ 页面切换 ============================ */
+$$("#nav button").forEach(function(b){
+  b.addEventListener("click",function(){
+    $$("#nav button").forEach(function(x){x.setAttribute("aria-current","false")});
+    b.setAttribute("aria-current","true");
+    $$(".page").forEach(function(p){p.removeAttribute("data-active")});
+    $('.page[data-page="'+b.dataset.go+'"]').setAttribute("data-active","");
+    closeEditor();
+    if(b.dataset.go==="map") requestAnimationFrame(drawWires);
+    if(b.dataset.go==="stick") drawCurves();
+    window.scrollTo(0,0);
+  });
+});
+
+/* ============================ 映射页 ============================ */
+function tagHTML(c){
+  /* 这一格的内容是运行时拼出来的：功能标签 + 快捷键，或者一个数字。
+     所以**整句不能进翻译表** —— 你一改绑定它就变成另一句话，表里那条立刻作废，
+     于是界面退回中文。做法是：标签自己查表（标签是固定的那几十个，表里都有），
+     快捷键本来就不用翻，拼好之后给容器打 data-dyn 让扫描器别碰。
+
+     「未绑定」这种状态也用 data-unset 标出来，不要回头去认文字 ——
+     一翻成英文，/未绑定|关闭/ 这种判断马上就失效了。 */
+  var txt, unset=false;
+  if(c.stick){
+    var s=profile().sticks[c.stick];
+    var m=STICK_MODES.filter(function(x){return x[0]===s.mode})[0];
+    txt=esc(t(m?m[1]:"关闭"));
+    unset = s.mode==="off";
+  }else if(c.group){
+    var n=c.group.filter(function(k){return bindingOf(k)&&bindingOf(k).type}).length;
+    txt = n ? esc(t("已绑 {n} / 4 个方向").replace("{n}",n)) : esc(t("未绑定"));
+    unset = !n;
+  }else{
+    var L=labelOf(bindingOf(c.id));
+    if(!L){ txt=esc(t("未绑定")); unset=true; }
+    else txt=esc(t(L.label))+(L.keys?' <em>'+esc(L.keys)+'</em>':'');
+  }
+  return '<span class="k">'+c.key+'</span>'
+       + '<span class="v" data-dyn'+(unset?' data-unset':'')+'>'+txt+'</span>';
+}
+function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g,function(m){
+  return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]; }); }
+
+function buildTags(){
+  if(!CFG) return;
+  var L=$("#colL"), R=$("#colR"); L.innerHTML=""; R.innerHTML="";
+  CONTROLS.forEach(function(c){
+    var d=document.createElement("button");
+    d.className="tag"; d.dataset.cid=c.id;
+    d.innerHTML=tagHTML(c);
+    if(!$(".v",d).textContent.trim()||$(".v",d).hasAttribute("data-unset")) d.classList.add("unset");
+    var ids = c.group ? c.group : [c.id];
+    if(ids.some(function(i){return CONFLICTS[i]})){
+      var f=document.createElement("i"); f.className="flag"; f.title="和另一个键绑了同一个功能";
+      $(".v",d).appendChild(f);
+    }
+    (c.side==="l"?L:R).appendChild(d);
+    d.addEventListener("mouseenter",function(){hot(c.id,true)});
+    d.addEventListener("mouseleave",function(){hot(c.id,false)});
+    d.addEventListener("click",function(ev){ev.stopPropagation();openEditor(c,d)});
+    var el=document.getElementById(c.el);
+    if(el){
+      el.style.cursor="pointer";
+      el.addEventListener("mouseenter",function(){hot(c.id,true)});
+      el.addEventListener("mouseleave",function(){hot(c.id,false)});
+      el.addEventListener("click",function(ev){ev.stopPropagation();openEditor(c,d)});
+    }
+  });
+  // 标注本身的文字走 data-dyn 不进表，但「重复绑定」那个 title 要翻。
+  localize($("#colL")); localize($("#colR"));
+  requestAnimationFrame(drawWires);
+}
+
+function hot(cid,on){
+  var t=$('.tag[data-cid="'+cid+'"]'); if(t) t.classList.toggle("hot",on);
+  var elId=SVG_OF[cid];
+  var el=elId&&document.getElementById(elId);
+  if(el) svgParts(el).forEach(function(n){n.classList.toggle("hot",on)});
+  var w=$('[data-wire="'+cid+'"]'); if(w) w.classList.toggle("hot",on);
+  var wd=$('[data-wdot="'+cid+'"]'); if(wd) wd.classList.toggle("hot",on);
+}
+function svgParts(el){
+  if(el.tagName==="g") return $$("rect.ctl,circle.ctl",el);
+  return el.classList.contains("ctl") ? [el] : [];
+}
+
+function drawWires(){
+  var stage=$("#stage"), svg=$("#wires");
+  if(!stage||stage.offsetParent===null) return;
+  if(window.innerWidth<=1080){ svg.innerHTML=""; return; }
+  var sr=stage.getBoundingClientRect();
+  svg.setAttribute("viewBox","0 0 "+sr.width+" "+sr.height);
+  var out="";
+  CONTROLS.forEach(function(c){
+    var tag=$('.tag[data-cid="'+c.id+'"]'), el=document.getElementById(c.el);
+    if(!tag||!el) return;
+    var tr=tag.getBoundingClientRect(), er=el.getBoundingClientRect();
+    var left=c.side==="l";
+    var x1=(left?tr.right:tr.left)-sr.left, y1=tr.top+tr.height/2-sr.top;
+    var x2=er.left+er.width/2-sr.left,      y2=er.top+er.height/2-sr.top;
+    var stub=left?x1+16:x1-16;
+    out+='<polyline data-wire="'+c.id+'" class="wire" points="'+x1+','+y1+' '+stub+','+y1+' '+x2+','+y2+'"/>';
+    out+='<circle data-wdot="'+c.id+'" class="wire-dot" cx="'+stub+'" cy="'+y1+'" r="2.2"/>';
+  });
+  svg.innerHTML=out;
+}
+
+/* ---------------------------- 绑定编辑器 ---------------------------- */
+var ed=$("#editor"), cur=null, curAnchor=null, recording=false;
+
+function openEditor(c,anchor,subId){
+  cur=c; curAnchor=anchor; recording=false;
+  var targetId = subId || c.id;
+  var isStick = !!c.stick;
+  var h="";
+
+  if(c.group && !subId){
+    h+='<h3>'+esc(c.name)+'</h3><p class="sub">四个方向分别绑定，点一个改一个</p>';
+    h+='<div class="grp" style="display:flex;flex-direction:column;gap:6px">';
+    var names={dpad_up:"↑ 上",dpad_down:"↓ 下",dpad_left:"← 左",dpad_right:"→ 右"};
+    c.group.forEach(function(k){
+      var L=labelOf(bindingOf(k));
+      // 右半边是「标签 · 快捷键」，运行时拼的 -> data-dyn，标签单独查表。
+      // 左半边（↑ 上）是固定文字，留给扫描器正常翻。
+      h+='<button class="subrow'+(L?'':' unset')+'" data-sub="'+k+'"><span>'+names[k]+
+         '</span><span data-dyn>'+bindText(L)+'</span></button>';
+    });
+    h+='</div><div class="editor-foot"><span style="font-size:11.5px;color:var(--faint)">改动即时生效</span>'+
+       '<button class="btn pri" data-act="done">完成</button></div>';
+    return showEditor(h,anchor,c.side);
+  }
+
+  var title = subId ? ({dpad_up:"十字键 上",dpad_down:"十字键 下",
+                        dpad_left:"十字键 左",dpad_right:"十字键 右"}[subId]) : c.name;
+  if(subId) h+='<button class="back" data-act="back">← 回到十字键</button>';
+  h+='<h3>'+esc(title)+'</h3>';
+  h+='<p class="sub">'+(isStick?"摇杆只能整根绑定一种用途":
+      (c.trigger?"扳机的手感在「自适应扳机」页设置":"点下面任意一项即可绑定"))+'</p>';
+
+  if(isStick){
+    var s=profile().sticks[c.stick];
+    h+='<div class="grp"><p>用途</p><div class="chips">';
+    STICK_MODES.forEach(function(m){
+      h+='<button class="chip'+(s.mode===m[0]?' on':'')+'" data-stickmode="'+m[0]+'">'+m[1]+'</button>';
+    });
+    h+='</div></div>';
+    h+='<div class="grp"><p>细调</p><div class="chips"><button class="chip" data-act="gostick">到「摇杆与鼠标」页调参数</button></div></div>';
+  }else{
+    var L=labelOf(bindingOf(targetId));
+    h+='<div class="now"><span data-dyn>'+bindText(L)+
+       '</span><button class="clear" data-act="clear">清除</button></div>';
+    var curAct=bindingOf(targetId);
+    if(curAct && curAct.type==="combo"){
+      var rep = curAct.repeat !== false;
+      h+='<div class="grp"><p>长按</p>'+
+         '<div class="row" style="padding:5px 0;border-bottom:none">'+
+         '<div class="lab"><b>长按连发</b><small>像键盘一样按住不放持续触发</small></div>'+
+         '<div class="ctlbox"><button class="sw" data-repeat="1" aria-label="长按连发" '+
+         'aria-pressed="'+(rep?"true":"false")+'"></button></div></div></div>';
+    }
+    h+='<div class="grp"><p>录制键盘按键</p><button class="rec" data-act="rec">点这里，然后按键盘</button></div>';
+    Object.keys(LIB).forEach(function(g){
+      h+='<div class="grp"><p>'+g+'</p><div class="chips">';
+      LIB[g].forEach(function(it){
+        var on = L && L.label===it.t;
+        h+='<button class="chip'+(on?' on':'')+'" data-item="'+esc(JSON.stringify(it))+'">'+esc(it.t)+'</button>';
+      });
+      h+='</div></div>';
+    });
+  }
+  h+='<div class="editor-foot"><span style="font-size:11.5px;color:var(--faint)">改动即时生效</span>'+
+     '<button class="btn pri" data-act="done">完成</button></div>';
+  ed.dataset.target = targetId;
+  showEditor(h,anchor,c.side);
+}
+
+function showEditor(html,anchor,side){
+  ed.innerHTML=html;
+  ed.setAttribute("data-open","");
+  // 必须在量高度之前翻：译文和原文长度不一样，先量后翻的话弹窗会定位错位。
+  // 这一行漏了整整一版 —— 弹窗里上百个字全是中文，而它们的译文明明都躺在表里，
+  // 只是没人来套。别的动态内容都补了这一步（repaint、loadAudio），就这里忘了。
+  localize(ed);
+  var sr=$("#stage").getBoundingClientRect(), ar=anchor.getBoundingClientRect();
+  var left = side==="l" ? (ar.right-sr.left+22) : (ar.left-sr.left-22-286);
+  var top  = ar.top-sr.top-10;
+  top = Math.max(8, Math.min(top, sr.height-ed.offsetHeight-8));
+  left= Math.max(8, Math.min(left, sr.width-294));
+  ed.style.left=left+"px"; ed.style.top=top+"px";
+}
+function closeEditor(){ ed.removeAttribute("data-open"); cur=null; recording=false; }
+
+function applyAction(targetId, action){
+  call("set_binding", targetId, action).then(function(res){
+    if(res){ CFG=res.config; CONFLICTS=res.conflicts||{}; }
+    buildTags(); closeEditor();
+  });
+  if(DEMO){
+    var p=profile();
+    if(targetId==="l2"||targetId==="r2") p.triggers[targetId].binding=action;
+    else p.buttons[targetId]=action;
+    buildTags(); closeEditor();
+  }
+}
+
+ed.addEventListener("click",function(e){
+  e.stopPropagation();
+  var rp=e.target.closest("[data-repeat]");
+  if(rp){
+    var on = rp.getAttribute("aria-pressed") !== "true";
+    rp.setAttribute("aria-pressed", on ? "true" : "false");
+    var a = bindingOf(ed.dataset.target);
+    if(a){ a.repeat = on; call("set_binding", ed.dataset.target, a); }
+    return;                       // 不关编辑器，方便接着调
+  }
+  var sub=e.target.closest("[data-sub]");
+  if(sub){ openEditor(cur,curAnchor,sub.dataset.sub); return; }
+  var t=e.target.closest("[data-act],[data-item],[data-stickmode]");
+  if(!t) return;
+  var act=t.dataset.act;
+  if(act==="done"){ closeEditor(); return; }
+  if(act==="back"){ openEditor(cur,curAnchor); return; }
+  if(act==="gostick"){ closeEditor(); $('#nav button[data-go="stick"]').click(); return; }
+  if(act==="clear"){ applyAction(ed.dataset.target, {type:null,label:null}); return; }
+  if(act==="rec"){
+    recording=!recording;
+    t.classList.toggle("live",recording);
+    t.textContent=recording?"正在监听… 按下任意键盘组合":"点这里，然后按键盘";
+    return;
+  }
+  if(t.dataset.stickmode!==undefined){
+    var name=cur.stick;
+    profile().sticks[name].mode=t.dataset.stickmode;
+    call("set_path","profiles."+CFG.active_profile+".sticks."+name+".mode",t.dataset.stickmode);
+    buildTags(); renderSticks(); closeEditor();
+    return;
+  }
+  if(t.dataset.item!==undefined){
+    var it=JSON.parse(t.dataset.item);
+    var action;
+    if(it.m) action={type:"mouse",button:it.m,label:it.t};
+    else if(it.b) action={type:"builtin",name:it.b,label:it.t};
+    else{
+      action={type:"combo",keys:it.k,label:it.t};
+      if(it.r===false) action.repeat=false;      // 这类动作不该连发
+    }
+    applyAction(ed.dataset.target, action);
+  }
+});
+
+document.addEventListener("keydown",function(e){
+  if(!recording||!cur) return;
+  e.preventDefault();
+  var parts=[];
+  if(e.ctrlKey) parts.push("Ctrl");
+  if(e.altKey)  parts.push("Alt");
+  if(e.shiftKey)parts.push("Shift");
+  if(e.metaKey) parts.push("Win");
+  var k=e.key;
+  if(["Control","Alt","Shift","Meta"].indexOf(k)>=0){
+    var live=$(".rec",ed); if(live) live.textContent=parts.join(" + ")+" + …";
+    return;
+  }
+  if(k===" ") k="Space";
+  if(k.indexOf("Arrow")===0) k=k.slice(5);
+  if(k.length===1) k=k.toUpperCase();
+  parts.push(k);
+  var combo=parts.join("+");
+  applyAction(ed.dataset.target, {type:"combo",keys:combo,label:combo});
+});
+document.addEventListener("click",function(){ if(ed.hasAttribute("data-open")) closeEditor(); });
+document.addEventListener("keydown",function(e){ if(e.key==="Escape") closeEditor(); });
+
+/* ============================ 通用控件渲染 ============================ */
+function sw(path,checked,label){
+  return '<button class="sw" data-path="'+path+'" aria-pressed="'+(checked?"true":"false")+
+         '" aria-label="'+esc(label||"")+'"></button>';
+}
+function slider(path,val,min,max,step,unit){
+  return '<input type="range" min="'+min+'" max="'+max+'" step="'+(step||1)+'" value="'+val+
+         '" data-path="'+path+'" data-unit="'+(unit||"")+'"><span class="val">'+val+(unit||"")+'</span>';
+}
+function seg(path,val,options){
+  return '<div class="seg" data-path="'+path+'">'+options.map(function(o){
+    return '<button data-v="'+o[0]+'" class="'+(String(val)===String(o[0])?"on":"")+'">'+o[1]+'</button>';
+  }).join("")+'</div>';
+}
+function sel(path,val,options){
+  return '<select data-path="'+path+'">'+options.map(function(o){
+    return '<option value="'+o[0]+'"'+(String(val)===String(o[0])?" selected":"")+'>'+o[1]+'</option>';
+  }).join("")+'</select>';
+}
+function hex2rgb(h){
+  h=String(h||"").replace("#","");
+  return [parseInt(h.slice(0,2),16)||0,parseInt(h.slice(2,4),16)||0,parseInt(h.slice(4,6),16)||0];
+}
+function rgb2hex(a){
+  a=a||[0,0,0];
+  return "#"+[0,1,2].map(function(i){
+    var v=Math.max(0,Math.min(255,Math.round(a[i]||0)));
+    return (v<16?"0":"")+v.toString(16);
+  }).join("");
+}
+var SWATCHES=["#2870ff","#00c8be","#aa50ff","#ff4d6d","#ff8c1a","#ffd400","#37d67a","#ffffff"];
+function color(path,val){
+  var h=rgb2hex(val);
+  return '<div class="cpick"><input type="color" data-path="'+path+'" value="'+h+'">'+
+         '<span class="hex">'+h.toUpperCase()+'</span>'+
+         '<span class="swatches" data-cpath="'+path+'">'+SWATCHES.map(function(c){
+           return '<button data-color="'+c+'" style="background:'+c+'" aria-label="'+c+'"></button>';
+         }).join("")+'</span></div>';
+}
+function row(label,hint,ctl){
+  return '<div class="row"><div class="lab"><b>'+label+'</b>'+(hint?'<small>'+hint+'</small>':'')+
+         '</div><div class="ctlbox">'+ctl+'</div></div>';
+}
+
+function setPath(path,value){
+  var node=CFG, parts=path.split(".");
+  for(var i=0;i<parts.length-1;i++){
+    node = Array.isArray(node) ? node[parseInt(parts[i],10)] : node[parts[i]];
+  }
+  var last=parts[parts.length-1];
+  if(Array.isArray(node)) node[parseInt(last,10)]=value; else node[last]=value;
+  call("set_path",path,value);
+}
+
+document.addEventListener("click",function(e){
+  var s=e.target.closest(".sw[data-path]");
+  if(s){
+    var on = s.getAttribute("aria-pressed")!=="true";
+    s.setAttribute("aria-pressed", on?"true":"false");
+    setPath(s.dataset.path,on);
+    if(/\.link_sensitivity$/.test(s.dataset.path)){ renderGyro(); localize(); }
+    if(/\.color_follows_profile$/.test(s.dataset.path)){ renderLights(); localize(); }
+    if(/adaptive_triggers_master|enabled|mode/.test(s.dataset.path)) renderTriggers();
+    if(s.dataset.path.indexOf("lights")>=0) renderLights();
+    // 关掉水平滚动之后，「左右滚动方向」那一行就没意义了，得跟着收起来
+    if(s.dataset.path.indexOf("horizontal_scroll")>=0) renderSticks();
+    return;
+  }
+  var b=e.target.closest(".seg[data-path] button");
+  if(b){
+    var seg=b.parentNode;
+    $$("button",seg).forEach(function(x){x.classList.remove("on")});
+    b.classList.add("on");
+    var v=b.dataset.v;
+    // 切到「自定义」时，把滑块预置成切换之前那套判定算出来的位置，
+    // 免得用户一切过去触发点就莫名其妙跳走。必须先算再改 fire_mode。
+    var seed=null;
+    if(/\.fire_mode$/.test(seg.dataset.path) && v==="custom"){
+      var tid=seg.dataset.path.split(".")[3], tt=profile().triggers[tid];
+      seed=[seg.dataset.path.replace(/\.fire_mode$/,""),
+            Math.round(firePercent(tt,1)), Math.round(firePercent(tt,2))];
+    }
+    setPath(seg.dataset.path, v==="true"?true:(v==="false"?false:v));
+    if(seed){ setPath(seed[0]+".fire_depth",seed[1]); setPath(seed[0]+".fire_depth2",seed[2]); }
+    if(seg.dataset.path.indexOf("triggers")>=0) renderTriggers();
+    if(seg.dataset.path.indexOf("lights")>=0) renderLights();
+    if(seg.dataset.path === "language"){
+      // 整页重画一遍：静态骨架上的 data-i18n 还在，localize() 会照它重译
+      LANG = v; CFG.language = v;
+      repaint();
+    }
+    if(seg.dataset.path.indexOf("gyro")>=0) renderGyro();
+    return;
+  }
+});
+document.addEventListener("input",function(e){
+  var c=e.target.closest('input[type=color][data-path]');
+  if(!c) return;
+  setPath(c.dataset.path, hex2rgb(c.value));
+  var lab=c.parentNode.querySelector(".hex");
+  if(lab) lab.textContent=c.value.toUpperCase();
+  if(c.dataset.path.indexOf("lights")>=0) updateLightPreview();
+});
+/* 取色器的 change（关掉系统取色对话框时才触发）再统一刷一次列表，
+   input 阶段不刷——那会在拖动时把 input 元素换掉，对话框直接断掉 */
+document.addEventListener("change",function(e){
+  var c=e.target.closest('input[type=color][data-path]');
+  if(c && c.dataset.path.indexOf("lightbar")>=0){ renderProfiles(); renderLights(); }
+});
+document.addEventListener("click",function(e){
+  var b=e.target.closest(".swatches[data-cpath] button[data-color]");
+  if(!b) return;
+  var path=b.closest(".swatches").dataset.cpath;
+  setPath(path, hex2rgb(b.dataset.color));
+  var box=b.closest(".cpick");
+  if(box){
+    var inp=box.querySelector('input[type=color]'); if(inp) inp.value=b.dataset.color;
+    var lab=box.querySelector(".hex"); if(lab) lab.textContent=b.dataset.color.toUpperCase();
+  }
+  if(path.indexOf("lights")>=0) updateLightPreview();
+});
+document.addEventListener("change",function(e){
+  var s=e.target.closest("select[data-path]");
+  if(s){ setPath(s.dataset.path, s.value);
+         if(s.dataset.path.indexOf("sticks")>=0){buildTags();renderSticks();}
+         // 换阻力效果会改变墙的跨度，进而改变「按穿墙」的触发点
+         if(s.dataset.path.indexOf("triggers")>=0) updateTriggerWalls(); }
+});
+document.addEventListener("input",function(e){
+  var r=e.target.closest('input[type=range][data-path]');
+  if(!r) return;
+  var v=parseFloat(r.value);
+  var out=r.parentNode.querySelector(".val");
+  if(out) out.textContent = (r.step && r.step!=="1" ? v.toFixed(1) : v) + (r.dataset.unit||"");
+  setPath(r.dataset.path, v);
+  if(r.dataset.path.indexOf("triggers")>=0) updateTriggerWalls();
+  if(r.dataset.path.indexOf("lights")>=0) updateLightPreview();
+  if(r.dataset.path.indexOf("sticks")>=0) drawCurves();
+});
+
+/* ============================ 扳机页 ============================ */
+/* 下面两个函数是 ps5mapper/triggers.py 里 wall_span() / fire_percent() 的镜像。
+   改一边必须同步改另一边，否则界面画的触发点和实际触发点会对不上。 */
+function depthToZone(d){ return Math.max(0, Math.min(9, Math.floor(d/100*10))); }
+function wallSpan(t, stage){
+  var z1=depthToZone(t.depth==null?60:t.depth);
+  if(t.mode==="dual"){
+    var z2=depthToZone(t.depth2==null?85:t.depth2);
+    if(z2<=z1) z2=Math.min(9,z1+1);
+    if(stage===2) return [z2, Math.min(9,z2+1)];
+    return [z1, Math.min(z2-1, z1+1)];
+  }
+  var pr=t.preset||"wall";
+  if(pr==="wall") return [z1, Math.min(9,z1+2)];
+  if(pr==="bow")  return [Math.max(0,z1-1), Math.min(8,z1+2)];
+  return [z1,z1];
+}
+function hasBreakthrough(t){
+  if(t.mode==="dual") return true;
+  var pr=t.preset||"wall";
+  return pr==="wall"||pr==="bow";
+}
+function firePercent(t, stage){
+  var base = (stage===2) ? Math.max((t.depth==null?60:t.depth)+5, t.depth2==null?85:t.depth2)
+                         : (t.depth==null?60:t.depth);
+  base = Math.max(5, Math.min(98, base));
+  var m=t.fire_mode||"wall";
+  if(m==="bottom") return 95;
+  if(m==="custom"){
+    var v = (stage===2)? t.fire_depth2 : t.fire_depth;
+    if(v==null) return base;
+    return Math.max(5, Math.min(98, v));
+  }
+  if(CFG.adaptive_triggers_master===false || t.enabled===false) return base;
+  if(!hasBreakthrough(t)) return base;
+  return Math.max(base, Math.min(98, (wallSpan(t,stage)[1]+1)*10));
+}
+function wallCss(t, stage){
+  var sp=wallSpan(t,stage);
+  return "left:"+(sp[0]*10)+"%;width:"+((sp[1]+1-sp[0])*10)+"%";
+}
+/* 参数名不能叫 t —— 会挡住翻译函数 t()。见 t() 上面那段注释。
+   返回的是「说明 + 百分比」，百分比随拖动在变，所以整句不进翻译表：
+   固定那几段各自查表，装它的 span 打 data-dyn。 */
+function fireHint(tg){
+  var f1=firePercent(tg,1);
+  if(tg.mode==="dual")
+    return t("第一段触发 ")+f1+t("% · 第二段触发 ")+firePercent(tg,2)+"%";
+  var m=tg.fire_mode||"wall";
+  return (m==="wall"?t("按穿阻力墙触发"):(m==="bottom"?t("按到底触发"):t("自定义触发点")))+" "+f1+"%";
+}
+function renderTriggers(){
+  if(!CFG) return;
+  var p=profile(), pi=CFG.active_profile, out="";
+  [["l2","L2"],["r2","R2"]].forEach(function(pair){
+    var id=pair[0], tg=p.triggers[id], base="profiles."+pi+".triggers."+id;
+    var L=labelOf(tg.binding), L2=labelOf(tg.binding2);
+    var dual=tg.mode==="dual";
+    out+='<div class="card"><h2>'+pair[1]+' <span class="pill'+(dual?" warn":"")+'">'+(dual?"双段":"单段")+'</span></h2>';
+    // 同样是运行时拼的句子：固定的那几段各自查表，绑定名走 bindLabel，
+    // 整句打 data-dyn 不进翻译表 —— 换个绑定整句就变了。
+    out+='<p class="hint" data-dyn>'+(dual
+        ? t("轻按 → ")+bindLabel(L)+t("　·　按穿到底 → ")+bindLabel(L2)
+        : t("当前绑定：")+bindLabel(L))+'</p>';
+    out+='<div class="tviz"><div class="tbar" data-trig="'+id+'"><div class="livebar" id="live-'+id+'"></div>'+
+         '<div class="twall" id="wall-'+id+'" style="'+wallCss(tg,1)+'"></div>'+
+         (dual?'<div class="twall b" id="wall2-'+id+'" style="'+wallCss(tg,2)+'"></div>':'')+
+         '<div class="tfire" id="fire-'+id+'" style="left:'+firePercent(tg,1)+'%"></div>'+
+         (dual?'<div class="tfire b" id="fire2-'+id+'" style="left:'+firePercent(tg,2)+'%"></div>':'')+
+         '</div>'+
+         '<div class="tscale"><span>松开</span><span id="scale-'+id+'" data-dyn>'+fireHint(tg)+
+         '</span><span>按到底</span></div>'+
+         '<div class="tlegend"><span><i style="background:rgba(217,164,65,.45)"></i><span>阻力墙覆盖范围</span></span>'+
+         '<span><i style="background:var(--ok)"></i><span>按键真正触发的位置</span></span></div></div>';
+    out+=row("模式","", seg(base+".mode",tg.mode,[["single","单段"],["dual","双段"]]));
+    out+=row("阻力墙起点","墙从这里开始，往后还要跨一段才按得穿", slider(base+".depth",tg.depth,15,95,1,"%"));
+    if(dual) out+=row("第二道墙起点","", slider(base+".depth2",tg.depth2,60,98,1,"%"));
+    out+=row("墙的硬度","", slider(base+".force",tg.force,0,255,1,""));
+    out+=row("按键触发判定","决定按到多深才算按下去",
+        seg(base+".fire_mode", tg.fire_mode||"wall",
+            [["wall","按穿墙"],["custom","自定义"],["bottom","按到底"]]));
+    if((tg.fire_mode||"wall")==="custom"){
+      out+=row("触发深度","自己定按到多深触发", slider(base+".fire_depth",tg.fire_depth,5,98,1,"%"));
+      if(dual) out+=row("第二段触发深度","", slider(base+".fire_depth2",tg.fire_depth2,5,98,1,"%"));
+    }
+    out+=row("回弹阈值","松回此深度才能再次触发", slider(base+".hysteresis",tg.hysteresis,5,80,1,"%"));
+    out+=row("阻力效果","", sel(base+".preset",tg.preset,Object.keys(META.presets||{}).map(function(k){
+        return [k,(META.presets||{})[k]];})));
+    out+=row("触发瞬间震动","", sw(base+".haptic",tg.haptic,"触发震动"));
+    out+=row("启用这根扳机的阻力","", sw(base+".enabled",tg.enabled,"启用扳机效果"));
+    out+='</div>';
+  });
+  $("#trigCards").innerHTML=out;
+  // 重画之后必须自己翻一遍：这些 render 函数不止在 repaint() 里被调用，
+  // 改一个开关也会单独调它们，那时候没人替它们 localize。
+  localize($("#trigCards"));
+}
+function updateTriggerWalls(){
+  if(!CFG) return;
+  var p=profile();
+  ["l2","r2"].forEach(function(id){
+    var t=p.triggers[id];
+    var w=$("#wall-"+id); if(w) w.style.cssText=wallCss(t,1);
+    var w2=$("#wall2-"+id); if(w2) w2.style.cssText=wallCss(t,2);
+    var f=$("#fire-"+id); if(f) f.style.left=firePercent(t,1)+"%";
+    var f2=$("#fire2-"+id); if(f2) f2.style.left=firePercent(t,2)+"%";
+    var sc=$("#scale-"+id);
+    if(sc) sc.textContent=fireHint(t);
+  });
+}
+
+/* ============================ 触摸板页 ============================ */
+function renderTouch(){
+  if(!CFG) return;
+  var tp=profile().touchpad, base="profiles."+CFG.active_profile+".touchpad";
+  var out="";
+  out+='<div class="card"><h2>指针</h2><p class="hint">混合模式 — 抬手再落下不会跳，和笔记本触控板一致</p>'
+     + row("启用指针移动","", sw(base+".pointer_enabled",tp.pointer_enabled,"启用触摸板指针"))
+     + row("灵敏度","", slider(base+".sensitivity",tp.sensitivity,1,10,1,""))
+     + row("加速","快速滑动时走得更远", sw(base+".acceleration",tp.acceleration,"触摸板加速"))
+     + '</div>';
+  out+='<div class="card"><h2>轻点与点击</h2>'
+     + '<p class="hint">和笔记本触摸板一致：轻点一下就是左键，不用真的把板子压下去。'
+     + '轻点手指几乎不滚动，天生没有下压漂移的问题。</p>'
+     + row("单指轻点 = 左键","", sw(base+".tap_to_click",tp.tap_to_click!==false,"轻点点击"))
+     + row("双指轻点 = 右键","", sw(base+".two_finger_tap_right",tp.two_finger_tap_right!==false,"双指轻点"))
+     + row("轻点一下再按住 = 拖动","笔记本上的「一次半」手势：点一下，紧接着再按住不放就能拖",
+           sw(base+".tap_drag",tp.tap_drag!==false,"轻点拖动"))
+     + '</div>';
+  out+='<div class="card"><h2>下压防漂移</h2>'
+     + '<p class="hint">触摸板是整块压下去的按键，<b>开关在按压行程的最后才闭合</b>，'
+     + '而手指在这段行程里已经压扁打滑了一两毫米——所以光标是在你按下去<b>之前</b>就飘走的，'
+     + '单纯「收到点击就冻住指针」根本来不及。这里照抄笔记本驱动的做法：'
+     + '缓存最近几十毫秒的位移，收到点击就倒回去，再在按住期间设一个拖动门槛。</p>'
+     + row("启用防漂移","", sw(base+".click_stabilize",tp.click_stabilize!==false,"防漂移"))
+     + row("倒回力度","",
+           seg(base+".rewind_mode",tp.rewind_mode||"smart",
+               [["smart","只倒漂移"],["always","一律倒回"],["off","不倒回"]]))
+     + row("拖动门槛","按下后要滑过这么远才开始拖。0 = 按下就能立刻拖，但点击会更容易飘",
+           slider(base+".click_gate",tp.click_gate==null?6:tp.click_gate,0,20,1,""))
+     + '<p class="hint" style="margin-bottom:0">「只倒漂移」= 只有按下前那段位移又慢又短、'
+     + '看着就是压手指压出来的，才把它撤销；你要是正快速划过去顺手点一下，那段位移是真的，不动它。</p>'
+     + '</div>';
+  out+='<div class="card"><h2>双指手势</h2><p class="hint">同向移动 = 滚动，间距变化 = 缩放，靠动作方向区分</p>'
+     + row("双指滚动","", sw(base+".two_finger_scroll",tp.two_finger_scroll,"双指滚动"))
+     + row("上下滚动方向","两个轴各管各的",
+           seg(base+".natural_scroll",tp.natural_scroll,[["true","自然"],["false","传统"]]))
+     + row("左右滚动方向","",
+           seg(base+".natural_hscroll",
+               tp.natural_hscroll==null?tp.natural_scroll:tp.natural_hscroll,
+               [["true","自然"],["false","传统"]]))
+     + row("滚动速度","", slider(base+".scroll_speed",tp.scroll_speed,1,10,1,""))
+     + row("捏合缩放","映射为 Ctrl + 滚轮", sw(base+".pinch_zoom",tp.pinch_zoom,"捏合缩放"))
+     + '</div>';
+  out+='<div class="card"><h2>边缘滑条</h2><p class="hint">手指必须从边缘落下才算滑条；从中间滑过去仍然是移动指针</p>'
+     + row("启用","", sw(base+".edge_slider",tp.edge_slider,"边缘滑条"))
+     + row("位置","", seg(base+".edge_side",tp.edge_side,[["left","左边缘"],["right","右边缘"]]))
+     + row("控制","", sel(base+".edge_target",tp.edge_target,[["volume","系统音量"],["scroll","页面滚动"]]))
+     + row("边缘宽度","越窄越不容易误触", slider(base+".edge_width",tp.edge_width,5,30,1,"%"))
+     + '</div>';
+  $("#touchCards").innerHTML=out;
+  // 同上：单独重画时也要自己翻。
+  localize($("#touchCards"));
+}
+
+/* ============================ 陀螺仪页 ============================ */
+function renderGyro(){
+  if(!CFG) return;
+  var p=profile(), g=p.gyro||{}, base="profiles."+CFG.active_profile+".gyro";
+  var out="";
+
+  out+='<div class="card"><h2>开关</h2>'
+     + '<p class="hint">默认关着。陀螺仪一开就是手一动光标就跑，'
+     + '所以用组合键随时开关——要放下手柄之前记得关掉。</p>'
+     + row("启用陀螺仪指针","也可以直接在这里开关",
+           sw(base+".enabled",g.enabled,"启用陀螺仪"))
+     + row("开关组合键","同按即切换，和紧急暂停是同一套机制",
+           '<button class="chip on" id="gyroCombo" data-dyn>'
+           + ((g.toggle_combo||[]).map(comboName).join(" + ")||"未设置") + '</button>')
+     + '</div>';
+
+  out+='<div class="card"><h2>实时读数</h2>'
+     + '<p class="hint">这是手柄<b>此刻</b>的角速度。把手柄照平常那样握在手里别动，'
+     + '看偏航那一行跳到多少——那就是你的手抖幅度，抖动压制的阈值定在它上面一点即可。</p>'
+     + '<div class="row"><div class="lab"><b>偏航（左右转）</b><small>控制光标左右</small></div>'
+     + '<div class="ctlbox"><b id="gyroYaw" data-dyn style="font-variant-numeric:tabular-nums">—</b></div></div>'
+     + '<div class="row"><div class="lab"><b>俯仰（上下抬）</b><small>控制光标上下</small></div>'
+     + '<div class="ctlbox"><b id="gyroPitch" data-dyn style="font-variant-numeric:tabular-nums">—</b></div></div>'
+     + '<div class="row"><div class="lab"><b>刻度标定</b><small>每只手柄出厂单独标定，读不到就只能按名义刻度估</small></div>'
+     + '<div class="ctlbox"><span id="gyroCal" data-dyn>—</span></div></div>'
+     + '<div class="row"><div class="lab"><b>零点补偿</b>'
+     + '<small>正常应该在 ±10 以内。数值很大又不回落，说明零点坏了</small></div>'
+     + '<div class="ctlbox"><span id="gyroBias" data-dyn>—</span></div></div>'
+     + '<div class="row"><div class="lab"><b>加速度计裁判</b>'
+     + '<small>靠重力方向判断手柄到底有没有在转。显示「静止」时，'
+     + '陀螺仪读到的任何角速度都会被当成零点偏差减掉</small></div>'
+     + '<div class="ctlbox"><span id="gyroStatic" data-dyn>—</span></div></div>'
+     + '</div>';
+
+  var linked = g.link_sensitivity!==false;
+  out+='<div class="card"><h2>灵敏度</h2>'
+     + '<p class="hint">默认值不是拍脑袋定的：实测你一次舒服的横扫大约转 75 度，'
+     + '25 像素/度正好让这个动作扫过整个屏幕宽度。要更快就往上调，上限 150。</p>'
+     + row("水平灵敏度","转 1 度光标走多少像素",
+           slider(base+".sensitivity",g.sensitivity==null?25:g.sensitivity,5,150,1," 像素/度"))
+     + row("两轴用同一个灵敏度",
+           "<b>强烈建议开着。</b>两个值不等会把斜向的方向感弄歪 —— 水平 80、垂直 50 时，"
+           + "一个标准的 45° 斜向动作走出来只有 32°，比你想的平得多",
+           sw(base+".link_sensitivity",linked,"两轴锁定"))
+     + (linked ? ""
+        : row("垂直灵敏度","已解锁，可以和水平不一样",
+              slider(base+".vertical_sensitivity",
+                     g.vertical_sensitivity==null?25:g.vertical_sensitivity,5,150,1," 像素/度")))
+     + '</div>';
+
+  out+='<div class="card"><h2>坐标系</h2>'
+     + '<p class="hint">偏航和俯仰是相对<b>手柄自己</b>定义的。手柄端得正时它们'
+     + '正好对应屏幕的左右上下；一旦侧倾（握着时很难完全端平，转手腕时侧倾角还一直在变），'
+     + '手柄的「偏航轴」就不再对着屏幕水平方向了 —— 侧倾 30° 就能明显感到'
+     + '「我明明往右上转，光标却偏右」。<br>'
+     + '<b>屏幕坐标系</b>用重力方向把转动换算回屏幕的左右上下，手柄歪着拿也对。'
+     + '端正状态下两者<b>完全一致</b>，所以切换不会影响你已经调好的任何参数。</p>'
+     + row("用哪套坐标","手柄指向正上或正下时会自动退回手柄坐标系 —— 那个姿势下本来也没有「屏幕水平」",
+           seg(base+".space",g.space||"world",
+               [["world","屏幕坐标系（推荐）"],["local","手柄坐标系"]]))
+     + '</div>';
+
+  out+='<div class="card"><h2>方向</h2>'
+     + '<p class="hint"><b>方向反了就点一下。</b>我的探针没能测出正负——'
+     + '每一段测试动作都是「来回转」，两个方向都做了，峰值只取绝对值大的那个，'
+     + '符号根本分不出来。所以这两个开关的默认值是猜的，你试一下就知道。</p>'
+     + row("水平反向","转左边光标却往右跑，就打开它",
+           sw(base+".invert_x",g.invert_x,"水平反向"))
+     + row("垂直反向","有人习惯像飞行摇杆那样上下相反",
+           sw(base+".invert_y",g.invert_y,"垂直反向"))
+     + '</div>';
+
+  out+='<div class="card"><h2>垂直轴模式</h2>'
+     + '<p class="hint"><b>相对</b>：和水平一样，看你转得多快，光标就走多少——'
+     + '转一圈回来光标不会回到原处，像鼠标一样可以「抬手复位」。<br>'
+     + '<b>绝对</b>：用加速度计感知重力，手柄的俯仰角直接对应光标在屏幕上的高度，'
+     + '永远不会漂。更接近「遥控器」的感觉，但手一晃光标就跟着晃，而且和水平方向手感不统一。<br>'
+     + '水平方向<b>只能</b>用相对——绕垂直轴转的时候重力方向不变，加速度计什么都感觉不到。</p>'
+     + row("模式","两种都试一下，选你顺手的",
+           seg(base+".vertical_mode",g.vertical_mode||"relative",
+               [["relative","相对（跟转速）"],["absolute","绝对（跟角度）"]]))
+     + row("绝对模式行程","抬起 / 压下多少度，光标就从屏幕顶走到底。角度越小越灵敏",
+           slider(base+".absolute_range",g.absolute_range==null?35:g.absolute_range,10,80,1,"°"))
+     + '</div>';
+
+  out+='<div class="card"><h2>抖动与平滑</h2>'
+     + '<p class="hint">手是会抖的，陀螺仪会忠实记录下来。这里不用硬死区'
+     + '（那会让人明显感到「有一块区域是死的」），而是阈值以下按比例缩小，'
+     + '两段在阈值处是连续的，不会有跨过某个点突然跳一下的感觉。</p>'
+     + row("抖动压制阈值","低于这个角速度的转动会被按比例削弱。照着上面的实时读数调",
+           slider(base+".tremor",g.tremor==null?3:g.tremor,0,12,0.1," 度/秒"))
+     + row("平滑帧数","取最近几帧的加权平均。手柄每秒上报约 586 帧，4 帧约等于 7 毫秒",
+           slider(base+".smoothing",g.smoothing==null?4:g.smoothing,1,16,1," 帧"))
+     + row("加速强度","慢速转动降增益、快速转动给全增益。0 = 固定增益（和以前一样）",
+           slider(base+".accel",g.accel==null?60:g.accel,0,100,5,"%"))
+     + '<div class="row"><div class="lab"><b>立即重新校准零点</b>'
+     + '<small>光标自己慢慢往一边爬时按一下。把手柄放平别动一两秒再按</small></div>'
+     + '<div class="ctlbox"><button class="btn" id="gyroRecal">重新校准</button></div></div>'
+     + '<p class="hint"><b>灵敏度调得高却嫌抖，先调这里的加速强度，别再往上堆阈值。</b>'
+     + '固定增益下「够快」和「不抖」是绑死的——灵敏度拉到 3 倍，手抖也跟着放大 3 倍，'
+     + '阈值只能决定「多小算抖」，决定不了「抖起来有多大」。'
+     + '加速把两者拆开：慢速（手抖都在这一段）降增益，快速（有意的大幅横扫）给全增益。</p>'
+     + '<p class="hint" style="margin-bottom:0">阈值调到 0 就是完全不压制。'
+     + '平滑帧数调大会更稳，但也会开始觉得跟手变慢。</p>'
+     + '</div>';
+
+  $("#gyroCards").innerHTML=out;
+  // 同上：单独重画时也要自己翻。
+  localize($("#gyroCards"));
+  var gc=$("#gyroCombo");
+  if(gc) gc.addEventListener("click",function(){ pickCombo(base+".toggle_combo", g.toggle_combo||[]); });
+  var rc=$("#gyroRecal");
+  if(rc) rc.addEventListener("click",function(){ call("gyro_recalibrate").then(function(){ toast("零点已重新校准"); }); });
+}
+
+/* 组合键录制：直接在手柄上按给它看，比在界面上勾一堆复选框直观得多。
+   同按的那几个键会被并集记下来，全部松开时提交。 */
+var COMBO_CAP=null;
+/* 扳机是模拟量，不在 buttons 里。录制组合键时按深度折算成「按下」，
+   门槛和引擎里的 TRIGGER_COMBO_DEPTH 保持一致。 */
+function comboButtons(s){
+  var b={}, k;
+  for(k in (s.buttons||{})) b[k]=s.buttons[k];
+  var tr=s.triggers||{};
+  b.l2=(tr.l2||0)>=0.90;
+  b.r2=(tr.r2||0)>=0.90;
+  return b;
+}
+function pickCombo(path,current){
+  COMBO_CAP={path:path, seen:{}, count:0, chip:$("#gyroCombo")||$("#pauseCombo")};
+  if(COMBO_CAP.chip){
+    COMBO_CAP.prev=COMBO_CAP.chip.textContent;
+    COMBO_CAP.chip.textContent="请在手柄上同时按住 2~3 个键（扳机要按到底）…";
+  }
+  toast("在手柄上同时按住想用的组合键，松开即保存");
+}
+function comboCaptureTick(buttons){
+  if(!COMBO_CAP) return;
+  var down=Object.keys(buttons||{}).filter(function(k){ return buttons[k]; });
+  if(down.length){
+    down.forEach(function(k){ COMBO_CAP.seen[k]=true; });
+    COMBO_CAP.count=Math.max(COMBO_CAP.count,down.length);
+    if(COMBO_CAP.chip)
+      COMBO_CAP.chip.textContent=Object.keys(COMBO_CAP.seen).map(comboName).join(" + ")+" …";
+    return;
+  }
+  var keys=Object.keys(COMBO_CAP.seen);
+  if(!keys.length) return;                 // 还没按过，继续等
+  var cap=COMBO_CAP; COMBO_CAP=null;
+  if(cap.count<2){
+    if(cap.chip) cap.chip.textContent=cap.prev||"未设置";
+    toast("至少要两个键同按，免得误触。再试一次");
+    return;
+  }
+  setPath(cap.path, keys);
+  toast(t("组合键已设为 ")+keys.map(comboName).join(" + "));
+}
+
+function updateGyroLive(snap){
+  var y=$("#gyroYaw"); if(!y||!snap||!snap.gyro) return;
+  var d=snap.gyro.dps||[0,0,0];
+  y.textContent=(d[1]>=0?"+":"")+d[1].toFixed(2)+tUnit(" 度/秒");
+  var pi=$("#gyroPitch");
+  if(pi) pi.textContent=(d[0]>=0?"+":"")+d[0].toFixed(2)+tUnit(" 度/秒");
+  var c=$("#gyroCal");
+  if(c) c.textContent=t(snap.gyro.calibrated?"已从手柄读到":"读不到，按名义刻度估算");
+  var b=$("#gyroBias");
+  if(b){
+    var bs=snap.gyro.bias||[0,0,0];
+    b.textContent=bs.map(function(v){return v.toFixed(1)}).join(" / ")
+      + (snap.gyro.recoveries?("   自救 "+snap.gyro.recoveries+" 次"):"");
+  }
+  var sg=$("#gyroStatic");
+  if(sg) sg.textContent=t(snap.gyro.static?"静止":"正在转动")
+      + t("（倾斜 ")+(snap.gyro.tilt_dps||0).toFixed(2)+t(" 度/秒）");
+}
+
+/* ============================ 摇杆页 ============================ */
+function renderSticks(){
+  if(!CFG) return;
+  var p=profile(), pi=CFG.active_profile, out="";
+  [["left","左摇杆"],["right","右摇杆"]].forEach(function(pair){
+    var id=pair[0], s=p.sticks[id], base="profiles."+pi+".sticks."+id;
+    var mode=STICK_MODES.filter(function(m){return m[0]===s.mode})[0];
+    out+='<div class="card"><h2>'+pair[1]+'</h2><p class="hint">当前用途：'+(mode?mode[1]:"关闭")+'</p>'
+       + row("用途","", sel(base+".mode",s.mode,STICK_MODES))
+       + row("死区","太小会因摇杆漂移导致指针乱飞", slider(base+".deadzone",s.deadzone,2,35,1,"%"))
+       + row(s.mode==="scroll"?"滚动速度":"最高速度","", slider(base+".speed",s.speed,1,20,1,""))
+       + row("加速曲线","数值越大，轻推越慢、推到底越快", slider(base+".curve",s.curve,1,3.5,0.1,""))
+       + (s.mode==="scroll"
+            ? row("水平滚动","", sw(base+".horizontal_scroll",s.horizontal_scroll,"水平滚动"))
+              + row("上下滚动方向","两个轴各管各的",
+                    seg(base+".invert_scroll",!!s.invert_scroll,[["false","自然"],["true","反向"]]))
+              + (s.horizontal_scroll
+                   ? row("左右滚动方向","",
+                         seg(base+".invert_hscroll",
+                             s.invert_hscroll==null?!!s.invert_scroll:!!s.invert_hscroll,
+                             [["false","自然"],["true","反向"]]))
+                   : "")
+            : "")
+       + '<canvas class="curve" data-curve="'+id+'" width="520" height="156"></canvas>'
+       + '</div>';
+  });
+  $("#stickCards").innerHTML=out;
+  // 同上：单独重画时也要自己翻。
+  localize($("#stickCards"));
+  drawCurves();
+}
+function drawCurves(){
+  if(!CFG) return;
+  $$("canvas[data-curve]").forEach(function(c){
+    var s=profile().sticks[c.dataset.curve];
+    var g=c.getContext("2d"), W=c.width, H=c.height;
+    var dz=s.deadzone/100, ex=Math.max(1,s.curve);
+    g.clearRect(0,0,W,H);
+    g.strokeStyle="#22262F"; g.lineWidth=1;
+    for(var i=1;i<5;i++){
+      g.beginPath(); g.moveTo(0,H*i/5); g.lineTo(W,H*i/5); g.stroke();
+      g.beginPath(); g.moveTo(W*i/5,0); g.lineTo(W*i/5,H); g.stroke();
+    }
+    g.fillStyle="rgba(217,164,65,.09)"; g.fillRect(0,0,W*dz,H);
+    g.strokeStyle="#D9A441"; g.setLineDash([3,3]);
+    g.beginPath(); g.moveTo(W*dz,0); g.lineTo(W*dz,H); g.stroke(); g.setLineDash([]);
+    g.strokeStyle="#5B9DFF"; g.lineWidth=2; g.beginPath();
+    for(var px=0;px<=W;px++){
+      var x=px/W, y = x<=dz ? 0 : Math.pow((x-dz)/(1-dz),ex);
+      var py=H-y*(H-6)-3;
+      px===0?g.moveTo(px,py):g.lineTo(px,py);
+    }
+    g.stroke();
+    g.fillStyle="#565C69"; g.font="11px ui-monospace,monospace";
+    g.fillText("死区",6,15); g.fillText("推到底",W-52,H-8);
+  });
+}
+
+/* ============================ 灯光页 ============================ */
+function renderLights(){
+  if(!CFG) return;
+  var L=CFG.lights||{}, base="lights", out="";
+  var eff=L.effect||"steady", on=L.enabled!==false;
+
+  out+='<div class="card"><h2>总体</h2>'
+     + '<p class="hint">亮度靠缩放颜色实现——灯条没有独立的亮度寄存器。拉到 0 就是全灭。'
+     + '你也可以把「开关手柄灯光」绑到任意一个手柄按键上，在按键映射页里选内置功能。</p>'
+     + row("开启手柄灯光","", sw(base+".enabled",on,"手柄灯光总开关"))
+     + row("亮度","", slider(base+".brightness",L.brightness==null?80:L.brightness,0,100,1,"%"))
+     + '</div>';
+
+  var follow = !!L.color_follows_profile;
+  out+='<div class="card"><h2>灯条</h2>'
+     + '<div class="lbprev" id="lbPreview"></div>'
+     + row("跟随当前配置档",
+           "开着：灯条<b>一直</b>是当前档的颜色，一眼就知道现在在哪个档。"
+           + "关着：一直用下面那个固定颜色，切档只闪一下就跳回去",
+           sw(base+".color_follows_profile",follow,"常驻颜色跟随配置档"))
+     + (follow
+        ? row("当前用的颜色","来自配置档页面，在那里改",
+              '<div class="cpick"><span class="swatches"><button disabled style="background:'
+              + rgb2hex(profile().lightbar) + ';cursor:default"></button></span>'
+              + '<span class="hex">' + rgb2hex(profile().lightbar).toUpperCase() + '</span></div>')
+        : row("常驻颜色","平时一直显示的颜色，和配置档无关", color(base+".color",L.color)))
+     + row("灯效","常亮不需要持续发包，最省电",
+           seg(base+".effect",eff,[["steady","常亮"],["breathe","呼吸"],["off","关闭"]]));
+  if(eff==="breathe")
+    out+=row("呼吸周期","一次完整明暗的秒数。动效以 30Hz 逐帧下发，蓝牙下会略微多耗电",
+             slider(base+".breathe_period",L.breathe_period==null?4:L.breathe_period,1,10,0.5,"s"));
+  out+='</div>';
+
+  out+='<div class="card"><h2>切换配置档时的提示</h2>'
+     + (follow
+        ? '<p class="hint">常驻颜色已经跟着配置档走了，闪和不闪长得一样，'
+          + '所以这一节现在不起作用。</p>'
+        : '')
+     + '<p class="hint">切档时灯条先亮成那一档的提示色，到时间自动回到上面的常驻灯效。'
+     + '下面就是「哪个档对应什么颜色」，点色块直接改。</p>'
+     + '<div class="flashlist">'
+     + CFG.profiles.map(function(p,i){
+         return '<div class="fl'+(i===CFG.active_profile?" on":"")+'">'+
+                '<input type="color" data-path="profiles.'+i+'.lightbar" value="'+
+                rgb2hex(p.lightbar||[40,110,255])+'" aria-label="'+esc(p.name)+' 的提示色">'+
+                '<b>'+esc(p.name)+'</b>'+
+                (i===CFG.active_profile?'<span class="now">使用中</span>':'')+
+                '</div>';
+       }).join("")
+     + '</div>'
+     + row("切档时闪提示色","", sw(base+".profile_flash",L.profile_flash!==false,"切档提示"))
+     + row("提示时长","", slider(base+".profile_flash_secs",L.profile_flash_secs==null?3:L.profile_flash_secs,2,10,0.5,"s"))
+     + '</div>';
+
+  out+='<div class="card"><h2>玩家灯与麦克风灯</h2>'
+     + '<p class="hint">玩家灯是触摸板下方、PS 键上方那一排 5 个白色小灯。'
+     + '它只粗略分三档，不显示精确电量——精确的百分比在标题栏一直写着，'
+     + '灯只回答「还够用 / 该找线了 / 快没电了」：</p>'
+     + batteryLegend()
+     + '<p class="hint" style="margin-top:0">这排灯物理上不是均匀排布的（中间三颗挨得更紧），'
+     + '所以刻意不用五颗全亮那个图案，看起来会是歪的。'
+     + '插着 USB 时手柄一直在充电，所以这个显示主要在蓝牙下有意义。</p>'
+     + row("玩家灯显示电量","", sw(base+".battery_on_player_leds",L.battery_on_player_leds!==false,"电量显示"))
+     + row("启用麦克风灯","", sw(base+".mic_led",L.mic_led!==false,"麦克风灯"))
+     + row("麦克风灯依据什么亮","",
+           seg(base+".mic_led_source",L.mic_led_source||"system",
+               [["system","系统麦克风状态"],["keypress","按键计数"]]))
+     + '<p class="hint">「系统麦克风状态」读的是 Windows 自己那套「有没有应用正在用麦克风」'
+     + '（任务栏那个麦克风图标就是靠它画的），所以 Win+H 静音几秒自动停掉时灯会跟着灭。'
+     + '代价是别的应用占着麦克风（Discord、浏览器、会议软件）它也会亮。<br>'
+     + '「按键计数」只数你按了几次 Win+H，会和自动停止对不上——按一次停、再按一次开的方向会整个反过来。</p>'
+     + '</div>';
+
+  out+='<div class="card"><h2>暂停与退出</h2>'
+     + '<p class="hint">映射暂停时灯条变暗红且停掉动效，另两盏灯熄灭——让「停了」这件事不可能被看错。'
+     + '退出程序时灯条恢复成 PS5 出厂那个蓝。</p>'
+     + row("暂停时灯条变红","", sw("pause_dims_lightbar",CFG.pause_dims_lightbar,"暂停变红"))
+     + '</div>';
+  $("#lightCards").innerHTML=out;
+  // 同上：单独重画时也要自己翻。
+  localize($("#lightCards"));
+  updateLightPreview();
+}
+function batteryLegend(){
+  /* 只有三档，而且图案是 probe12 在真手柄上一个个点亮试出来的，
+     不是按「一位一颗、从左到右」推的——那个位序在这只手柄上对不上。
+     这里画的位置就是实测看到的位置：中间一颗 / 靠近中间的两颗 / 除中间外的四颗。 */
+  var rows=[[[1,2,4,5],"26 – 100%"],[[2,4],"11 – 25%"],[[3],"10% 以下"]];
+  var out='<div class="batlegend">';
+  rows.forEach(function(r){
+    out+='<div class="bl"><span class="dots">';
+    for(var i=1;i<=5;i++) out+='<i class="'+(r[0].indexOf(i)>=0?"on":"")+'"></i>';
+    out+='</span><span>'+r[1]+'</span></div>';
+  });
+  // 充电：一颗 → 两颗 → 四颗，循环往上涨
+  out+='<div class="bl"><span class="dots">';
+  for(var i=1;i<=5;i++) out+='<i class="'+(i===3?"on":"blink")+'"></i>';
+  out+='</span><span>充电中 —— 由内往外循环点亮</span></div>';
+  return out+'</div>';
+}
+function updateLightPreview(){
+  var el=$("#lbPreview"); if(!el||!CFG) return;
+  var L=CFG.lights||{}, b=Math.max(0,Math.min(100,L.brightness==null?80:L.brightness))/100;
+  var c=(L.enabled===false||L.effect==="off")?[0,0,0]:(L.color||[40,110,255]);
+  el.style.background="rgb("+c.map(function(v){return Math.round(v*b)}).join(",")+")";
+}
+
+/* ============================ 配置档页 ============================ */
+function renderProfiles(){
+  if(!CFG) return;
+  var out="";
+  CFG.profiles.forEach(function(p,i){
+    var lb=p.lightbar||[40,110,255];
+    out+='<div class="pitem'+(i===CFG.active_profile?" on":"")+'" data-prof="'+i+'">'+
+         '<div class="n"><b data-rename="'+i+'" title="双击可改名">'+esc(p.name)+
+         '</b><small>双击名字可重命名 · 右边色块是切档提示色</small></div>'+
+         '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end">'+
+         '<input type="color" data-path="profiles.'+i+'.lightbar" value="'+rgb2hex(lb)+
+         '" title="切到这一档时闪的提示色" onclick="event.stopPropagation()">'+
+         (i===CFG.active_profile?'<span class="pill ok">使用中</span>':'<span class="pill">切换</span>')+
+         '<button class="iconbtn" data-dup="'+i+'" title="完整复制一份，接着改">复制</button>'+
+         '<button class="iconbtn" data-ren="'+i+'">重命名</button>'+
+         '<button class="iconbtn" data-reset="'+i+'">重置</button>'+
+         (CFG.profiles.length>1?'<button class="iconbtn" data-del="'+i+'">删除</button>':'')+
+         '</div></div>';
+  });
+  $("#profList").innerHTML=out;
+  // 同上：单独重画时也要自己翻。
+  localize($("#profList"));
+  var sel=$("#prof-sel");
+  sel.innerHTML=CFG.profiles.map(function(p,i){
+    return '<option value="'+i+'"'+(i===CFG.active_profile?" selected":"")+'>'+esc(p.name)+'</option>';
+  }).join("");
+}
+/* 重命名用就地编辑，不用 prompt()：pywebview 里那种原生对话框会阻塞整个
+   WebView，之前踩过一次窗口卡死，不想再碰。 */
+function startRename(i){
+  var row=$('.pitem[data-prof="'+i+'"]'); if(!row) return;
+  var b=$("b[data-rename]",row); if(!b || $(".rename",row)) return;
+  var old=CFG.profiles[i].name||"";
+  var inp=document.createElement("input");
+  inp.className="rename"; inp.value=old; inp.maxLength=40;
+  b.replaceWith(inp);
+  inp.focus(); inp.select();
+  var done=false;
+  function commit(save){
+    if(done) return; done=true;
+    if(save && inp.value.trim() && inp.value.trim()!==old){
+      call("rename_profile", i, inp.value.trim()).then(function(res){
+        applyConfig(res); toast("已重命名");
+      });
+      if(DEMO){ CFG.profiles[i].name=inp.value.trim(); renderProfiles(); buildTags(); }
+    } else { renderProfiles(); }
+  }
+  inp.addEventListener("keydown",function(ev){
+    ev.stopPropagation();
+    if(ev.key==="Enter") commit(true);
+    else if(ev.key==="Escape") commit(false);
+  });
+  inp.addEventListener("blur",function(){ commit(true); });
+  inp.addEventListener("click",function(ev){ ev.stopPropagation(); });
+  inp.addEventListener("dblclick",function(ev){ ev.stopPropagation(); });
+}
+
+$("#profList").addEventListener("dblclick",function(e){
+  var b=e.target.closest("b[data-rename]");
+  if(b){ e.stopPropagation(); startRename(parseInt(b.dataset.rename,10)); }
+});
+$("#profList").addEventListener("click",function(e){
+  var dup=e.target.closest("[data-dup]");
+  if(dup){ call("duplicate_profile",parseInt(dup.dataset.dup,10)).then(function(res){
+      applyConfig(res); toast("已复制一份，并切到新的这一档"); }); return; }
+  var ren=e.target.closest("[data-ren]");
+  if(ren){ startRename(parseInt(ren.dataset.ren,10)); return; }
+  // 名字本身不参与「点一下切档」——否则双击改名时，第一下点击已经触发了
+  // 切档 + 重绘，把刚插进去的输入框冲掉了。行的其他地方照旧可以点着切档。
+  if(e.target.closest(".rename") || e.target.closest("b[data-rename]")) return;
+  var d=e.target.closest("[data-del]");
+  if(d){ call("delete_profile",parseInt(d.dataset.del,10)).then(applyConfig); return; }
+  var r=e.target.closest("[data-reset]");
+  if(r){ call("reset_profile",parseInt(r.dataset.reset,10)).then(function(res){
+      applyConfig(res); toast("已恢复出厂映射"); }); return; }
+  var p=e.target.closest("[data-prof]");
+  if(p) call("set_active_profile",parseInt(p.dataset.prof,10)).then(applyConfig);
+});
+$("#addProf").addEventListener("click",function(){
+  call("add_profile","新配置档").then(applyConfig);
+});
+$("#prof-sel").addEventListener("change",function(){
+  call("set_active_profile",parseInt(this.value,10)).then(applyConfig);
+});
+
+/* ============================ 设置页 ============================ */
+function renderSettings(){
+  if(!CFG) return;
+  var out="";
+  out+='<div class="card"><h2>紧急暂停</h2><p class="hint">按一下停掉全部映射，再按一下恢复。不能删除，但组合可以改。</p>'
+     + row("组合键","三键同按，游戏中几乎不可能误触",
+           '<button class="chip on" id="pauseCombo" data-dyn>'+ (CFG.pause_combo||[]).map(comboName).join(" + ") +'</button>')
+     + '</div>';
+  // 语言列表来自翻译表本身（ui/lang/*.json）。往那个目录里丢一个新的
+  // json，这里就会自动多一个选项，不用改代码。
+  var langs=(window.I18N_LANGS||[{code:"zh-CN",name:"简体中文"}])
+              .map(function(l){ return [l.code, l.name]; });
+  out+='<div class="card"><h2>语言</h2><p class="hint">改完立刻生效，不用重启。设置存在配置文件里。</p>'
+     + row("界面语言","Interface language",
+           seg("language",CFG.language||"zh-CN",langs)
+             .replace('class="seg"','class="seg" data-nolocalize'))
+     + '</div>';
+  out+='<div class="card"><h2>运行方式</h2><p class="hint">不自启、不常驻 —— 关掉程序，手柄立刻变回普通手柄</p>'
+     + row("开机自启","默认关闭，避免和玩游戏冲突", sw("autostart",CFG.autostart,"开机自启"))
+     + row("启动后最小化到托盘","", sw("start_minimized",CFG.start_minimized,"最小化到托盘"))
+     + row("手柄断开时","", sel("on_disconnect",CFG.on_disconnect,[["wait","静默等待重连"],["notify","弹出提示"],["quit","自动退出"]]))
+     + row("指针刷新率","越高指针越顺滑，也越吃一点 CPU", slider("pointer_hz",CFG.pointer_hz,60,500,10," Hz"))
+     + '</div>';
+  out+='<div class="card"><h2>长按连发</h2><p class="hint">Windows 不会给模拟按键生成自动重复，这里自己补上</p>'
+     + row("启用","关掉之后按住只触发一次", sw("key_repeat",CFG.key_repeat,"长按连发"))
+     + row("起始延迟","按住多久开始连发", slider("key_repeat_delay",CFG.key_repeat_delay,150,1000,10," ms"))
+     + row("连发频率","每秒触发多少次", slider("key_repeat_rate",CFG.key_repeat_rate,5,40,1," 次/秒"))
+     + '</div>';
+  out+='<div class="card"><h2>音频</h2><p class="hint">Win+H 用的是系统默认录音设备</p>'
+     + '<div id="audioRows"><div class="empty">正在读取录音设备…</div></div>'
+     + row("阻止 Windows 自动切走","插上手柄时系统常会强制切换默认设备",
+           sw("block_audio_autoswitch",CFG.block_audio_autoswitch,"阻止自动切换"))
+     + '</div>';
+  out+='<div class="card"><h2>关于</h2><p class="hint">配置文件</p>'
+     + '<div class="row"><div class="lab"><b>存放位置</b><small id="cfgPath" data-dyn>—</small></div>'
+     + '<div class="ctlbox"><button class="btn" id="openSound">打开系统声音设置</button></div></div>'
+     + '</div>';
+  $("#setCards").innerHTML=out;
+  // 同上：单独重画时也要自己翻。
+  localize($("#setCards"));
+  var pcb=$("#pauseCombo");
+  if(pcb) pcb.addEventListener("click",function(){ pickCombo("pause_combo", CFG.pause_combo||[]); });
+  call("config_file_path").then(function(p){ if(p) $("#cfgPath").textContent=p; });
+  var os=$("#openSound"); if(os) os.addEventListener("click",function(){ call("open_sound_settings"); });
+  loadAudio();
+}
+function comboName(id){
+  var m={l1:"L1",r1:"R1",l2:"L2",r2:"R2",l3:"L3",r3:"R3",touchpad_click:t("触摸板"),
+         create:"Create",options:"Options",ps:"PS",mic:t("麦克风键"),
+         cross:"✕",circle:"○",square:"□",triangle:"△"};
+  return m[id]||id;
+}
+function loadAudio(){
+  call("list_audio").then(function(list){
+    var box=$("#audioRows"); if(!box) return;
+    setTimeout(function(){ localize(box); }, 0);   // 异步填完才轮到它
+    if(!list||!list.length){
+      box.innerHTML='<div class="empty">没读到录音设备。需要 pycaw / comtypes，或者这台机器不支持自动切换。</div>';
+      return;
+    }
+    box.innerHTML=list.map(function(d){
+      var mine=/wireless controller|dualsense/i.test(d.name);
+      return '<div class="row"><div class="lab"><b>'+esc(d.name)+'</b>'+
+             (mine?'<small>手柄内置麦克风</small>':'')+'</div>'+
+             '<div class="ctlbox"><button class="btn" data-audio="'+esc(d.id)+'">设为默认</button></div></div>';
+    }).join("");
+    $$("[data-audio]",box).forEach(function(b){
+      b.addEventListener("click",function(){
+        call("set_audio_device",b.dataset.audio).then(function(ok){
+          toast(ok?"已切换默认录音设备":"切换失败，请在系统声音设置里手动改");
+        });
+      });
+    });
+  });
+}
+
+/* ============================ 实时状态 ============================ */
+var lastPressed={};
+function pollState(){
+  call("get_state").then(function(s){
+    if(!s) return;
+    // 连接状态
+    var dot=$("#connDot"), txt=$("#connText");
+    if(s.connected){
+      dot.classList.remove("off");
+      txt.textContent=t(s.bluetooth?"蓝牙":"USB")+t(" 已连接")+
+        (s.battery!=null?(t(" · 电量 ")+s.battery+"%"+(s.charging?t(" 充电中"):"")):"");
+    }else{
+      dot.classList.add("off");
+      txt.textContent=t("未检测到手柄");
+    }
+    var m=$("#master");
+    m.setAttribute("aria-pressed", s.paused?"false":"true");
+    $("#masterLabel").textContent = t(s.paused?"映射已暂停":"映射已启用");
+
+    // 按键高亮
+    var b=s.buttons||{};
+    Object.keys(b).forEach(function(k){
+      if(!!b[k]===!!lastPressed[k]) return;
+      lastPressed[k]=b[k];
+      var el=document.getElementById(SVG_OF[k]||"");
+      if(el) svgParts(el).forEach(function(n){n.classList.toggle("live",!!b[k])});
+    });
+    updateGyroLive(s);
+    comboCaptureTick(comboButtons(s));
+    // 扳机实时条
+    var tr=s.triggers||{};
+    ["l2","r2"].forEach(function(id){
+      var bar=document.getElementById("live-"+id);
+      if(bar) bar.style.width=Math.round((tr[id]||0)*100)+"%";
+    });
+  });
+}
+
+/* ============================ 启动 ============================ */
+function repaint(){
+  buildTags(); renderTriggers(); renderTouch(); renderSticks(); renderGyro();
+  renderLights(); renderProfiles(); renderSettings();
+  localize();
+  var pc=(CFG.pause_combo||[]).map(comboName).join("+");
+  $("#pauseHint").textContent=t("紧急暂停 ")+pc;
+}
+
+function applyConfig(res){
+  if(!res) return;
+  CFG=res.config; CONFLICTS=res.conflicts||{}; META=res;
+  LANG = CFG.language || "zh-CN";
+  if(LANG !== "zh-CN" && !(window.I18N && window.I18N[LANG])) LANG = "zh-CN";
+  repaint();
+  var atm=$('[data-path="adaptive_triggers_master"]');
+  if(atm) atm.setAttribute("aria-pressed", CFG.adaptive_triggers_master?"true":"false");
+  $("#verline").textContent = "v"+(CFG.version_string||"1.0.0");
+}
+
+$("#master").addEventListener("click",function(){ call("toggle_pause"); });
+
+window.__onEngineEvent=function(kind,payload){
+  if(kind==="profile"){ call("get_config").then(applyConfig); toast("已切换配置档"); }
+  else if(kind==="pause"){ toast(payload?"映射已暂停":"映射已恢复"); }
+  else if(kind==="gyro"){ call("get_config").then(applyConfig); toast(payload?"陀螺仪已开启":"陀螺仪已关闭"); }
+  else if(kind==="connected"){ toast(t("手柄已连接（")+t(payload&&payload.bluetooth?"蓝牙":"USB")+t("）")); }
+  else if(kind==="audio"){ toast(t("录音设备：")+payload); }
+  else if(kind==="error"){ toast(String(payload)); }
+};
+
+/* pywebview 要先初始化 WebView2 才会注入 window.pywebview.api，
+   这个过程经常超过 1 秒。所以必须真的等，不能定个短超时就判定失败。*/
+var _booted = false;
+
+function backendReady(){
+  var api = window.pywebview && window.pywebview.api;
+  return (api && typeof api.get_config === "function") ? api : null;
+}
+
+function start(api){
+  if(_booted) return;
+  _booted = true;
+  API = api;
+  DEMO = !api;
+  if(api){
+    call("get_config").then(function(res){
+      if(res) applyConfig(res);
+      else showNoBackend("后端返回了空配置");
+    }, function(err){
+      showNoBackend("调用后端出错：" + err);
+    });
+  }
+  setInterval(pollState, 60);
+  window.addEventListener("resize", function(){ drawWires(); drawCurves(); });
+}
+
+function waitForBackend(tries){
+  var api = backendReady();
+  if(api){ start(api); return; }
+  if(tries > 0){
+    setTimeout(function(){ waitForBackend(tries - 1); }, 100);
+    return;
+  }
+  start(null);
+  showNoBackend("等了 15 秒，window.pywebview.api 一直没出现");
+}
+
+/* 连不上时把「到底查到了什么」摊开，不要只说一句没连上 */
+function showNoBackend(why){
+  if(document.getElementById("nobackend")) return;
+  var pv = window.pywebview;
+  var keys = "(无)";
+  try{
+    if(pv && pv.api) keys = Object.keys(pv.api).sort().join("、") || "(空对象)";
+  }catch(e){ keys = "读取失败：" + e; }
+  var el = document.createElement("div");
+  el.id = "nobackend";
+  el.className = "note";
+  el.style.margin = "0 0 16px";
+  el.innerHTML = "<div><b>没连上后端，界面现在是只读的。</b><br>" +
+    "原因：" + esc(why) + "<br><br>" +
+    "window.pywebview　" + (pv ? "存在" : "不存在") + "<br>" +
+    "window.pywebview.api　" + (pv && pv.api ? "存在" : "不存在") + "<br>" +
+    "api 上的方法：" + esc(keys) + "<br><br>" +
+    "把这段截图发回来，就能定位问题。</div>";
+  var main = document.querySelector(".main");
+  if(main) main.insertBefore(el, main.firstChild);
+}
+
+window.addEventListener("pywebviewready", function(){
+  var api = backendReady();
+  if(api) start(api);
+});
+waitForBackend(150);          // 最多等 15 秒
+
+})();
+
+</script>
+</body>
+</html>

@@ -1,0 +1,410 @@
+{
+  "version": 1,
+  "active_profile": 0,
+  "profiles": [
+    {
+      "name": "日常桌面",
+      "lightbar": [
+        105,
+        41,
+        255
+      ],
+      "buttons": {
+        "cross": {
+          "type": "combo",
+          "keys": "Ctrl+V",
+          "label": "粘贴"
+        },
+        "circle": {
+          "type": "combo",
+          "keys": "Ctrl+-",
+          "label": "Ctrl+-"
+        },
+        "square": {
+          "type": "combo",
+          "keys": "Ctrl+C",
+          "label": "复制"
+        },
+        "triangle": {
+          "type": "combo",
+          "keys": "Ctrl+=",
+          "label": "Ctrl+="
+        },
+        "dpad_up": {
+          "type": "combo",
+          "keys": "Up",
+          "label": "上箭头"
+        },
+        "dpad_down": {
+          "type": "combo",
+          "keys": "Down",
+          "label": "下箭头"
+        },
+        "dpad_left": {
+          "type": "combo",
+          "keys": "Left",
+          "label": "左箭头"
+        },
+        "dpad_right": {
+          "type": "combo",
+          "keys": "Right",
+          "label": "右箭头"
+        },
+        "l1": {
+          "type": "mouse",
+          "button": "left",
+          "label": "鼠标左键"
+        },
+        "r1": {
+          "type": "mouse",
+          "button": "right",
+          "label": "鼠标右键"
+        },
+        "l3": {
+          "type": "combo",
+          "keys": "Alt+Left",
+          "label": "上一页（后退）"
+        },
+        "r3": {
+          "type": "combo",
+          "keys": "Alt+Right",
+          "label": "下一页（前进）"
+        },
+        "create": {
+          "type": "combo",
+          "keys": "Win+D",
+          "label": "显示桌面",
+          "repeat": false
+        },
+        "options": {
+          "type": "combo",
+          "keys": "Ctrl+Alt+Tab",
+          "label": "常驻切窗",
+          "repeat": false
+        },
+        "ps": {
+          "type": "builtin",
+          "name": "profile_next",
+          "label": "切换配置档"
+        },
+        "touchpad_click": {
+          "type": "mouse",
+          "button": "left",
+          "label": "鼠标左键"
+        },
+        "mic": {
+          "type": "combo",
+          "keys": "Win+H",
+          "label": "语音输入",
+          "repeat": false
+        }
+      },
+      "triggers": {
+        "l2": {
+          "enabled": true,
+          "mode": "single",
+          "preset": "wall",
+          "depth": 40,
+          "depth2": 85,
+          "fire_mode": "bottom",
+          "fire_depth": 75,
+          "fire_depth2": 95,
+          "force": 100,
+          "hysteresis": 38,
+          "haptic": false,
+          "binding": {
+            "type": "combo",
+            "keys": "Backspace",
+            "label": "Backspace"
+          },
+          "binding2": {
+            "type": null,
+            "label": null
+          }
+        },
+        "r2": {
+          "enabled": true,
+          "mode": "single",
+          "preset": "wall",
+          "depth": 40,
+          "depth2": 85,
+          "fire_mode": "bottom",
+          "fire_depth": 75,
+          "fire_depth2": 95,
+          "force": 180,
+          "hysteresis": 38,
+          "haptic": false,
+          "binding": {
+            "type": "combo",
+            "keys": "Enter",
+            "label": "Enter"
+          },
+          "binding2": {
+            "type": null,
+            "label": null
+          }
+        }
+      },
+      "sticks": {
+        "left": {
+          "mode": "mouse",
+          "deadzone": 5,
+          "speed": 20,
+          "curve": 3.5,
+          "horizontal_scroll": true,
+          "invert_scroll": false,
+          "invert_hscroll": false
+        },
+        "right": {
+          "mode": "scroll",
+          "deadzone": 2,
+          "speed": 17,
+          "curve": 3.5,
+          "horizontal_scroll": true,
+          "invert_scroll": false,
+          "invert_hscroll": false
+        }
+      },
+      "touchpad": {
+        "pointer_enabled": true,
+        "sensitivity": 7,
+        "acceleration": false,
+        "two_finger_scroll": true,
+        "natural_scroll": false,
+        "natural_hscroll": true,
+        "scroll_speed": 2,
+        "pinch_zoom": false,
+        "edge_slider": true,
+        "edge_side": "left",
+        "edge_target": "volume",
+        "edge_width": 5,
+        "tap_to_click": true,
+        "two_finger_tap_right": false,
+        "tap_drag": true,
+        "click_stabilize": true,
+        "rewind_mode": "always",
+        "click_gate": 6
+      }
+    },
+    {
+      "name": "日常桌面 副本",
+      "lightbar": [
+        187,
+        255,
+        41
+      ],
+      "buttons": {
+        "cross": {
+          "type": "combo",
+          "keys": "Ctrl+V",
+          "label": "粘贴"
+        },
+        "circle": {
+          "type": "combo",
+          "keys": "Ctrl+-",
+          "label": "Ctrl+-"
+        },
+        "square": {
+          "type": "combo",
+          "keys": "Ctrl+C",
+          "label": "复制"
+        },
+        "triangle": {
+          "type": "combo",
+          "keys": "Ctrl+=",
+          "label": "Ctrl+="
+        },
+        "dpad_up": {
+          "type": "combo",
+          "keys": "Up",
+          "label": "上箭头"
+        },
+        "dpad_down": {
+          "type": "combo",
+          "keys": "Down",
+          "label": "下箭头"
+        },
+        "dpad_left": {
+          "type": "combo",
+          "keys": "Left",
+          "label": "左箭头"
+        },
+        "dpad_right": {
+          "type": "combo",
+          "keys": "Right",
+          "label": "右箭头"
+        },
+        "l1": {
+          "type": "mouse",
+          "button": "left",
+          "label": "鼠标左键"
+        },
+        "r1": {
+          "type": "mouse",
+          "button": "right",
+          "label": "鼠标右键"
+        },
+        "l3": {
+          "type": "combo",
+          "keys": "Alt+Left",
+          "label": "上一页（后退）"
+        },
+        "r3": {
+          "type": "combo",
+          "keys": "Alt+Right",
+          "label": "下一页（前进）"
+        },
+        "create": {
+          "type": "combo",
+          "keys": "Win+D",
+          "label": "显示桌面",
+          "repeat": false
+        },
+        "options": {
+          "type": "combo",
+          "keys": "Ctrl+Alt+Tab",
+          "label": "常驻切窗",
+          "repeat": false
+        },
+        "ps": {
+          "type": "builtin",
+          "name": "profile_next",
+          "label": "切换配置档"
+        },
+        "touchpad_click": {
+          "type": "mouse",
+          "button": "left",
+          "label": "鼠标左键"
+        },
+        "mic": {
+          "type": "combo",
+          "keys": "Win+H",
+          "label": "语音输入",
+          "repeat": false
+        }
+      },
+      "triggers": {
+        "l2": {
+          "enabled": true,
+          "mode": "single",
+          "preset": "wall",
+          "depth": 40,
+          "depth2": 85,
+          "fire_mode": "bottom",
+          "fire_depth": 75,
+          "fire_depth2": 95,
+          "force": 100,
+          "hysteresis": 38,
+          "haptic": false,
+          "binding": {
+            "type": "combo",
+            "keys": "Backspace",
+            "label": "Backspace"
+          },
+          "binding2": {
+            "type": null,
+            "label": null
+          }
+        },
+        "r2": {
+          "enabled": true,
+          "mode": "single",
+          "preset": "wall",
+          "depth": 40,
+          "depth2": 85,
+          "fire_mode": "bottom",
+          "fire_depth": 75,
+          "fire_depth2": 95,
+          "force": 180,
+          "hysteresis": 38,
+          "haptic": false,
+          "binding": {
+            "type": "combo",
+            "keys": "Enter",
+            "label": "Enter"
+          },
+          "binding2": {
+            "type": null,
+            "label": null
+          }
+        }
+      },
+      "sticks": {
+        "left": {
+          "mode": "mouse",
+          "deadzone": 5,
+          "speed": 20,
+          "curve": 3.5,
+          "horizontal_scroll": true,
+          "invert_scroll": false,
+          "invert_hscroll": false
+        },
+        "right": {
+          "mode": "scroll",
+          "deadzone": 2,
+          "speed": 17,
+          "curve": 3.5,
+          "horizontal_scroll": true,
+          "invert_scroll": false,
+          "invert_hscroll": false
+        }
+      },
+      "touchpad": {
+        "pointer_enabled": true,
+        "sensitivity": 7,
+        "acceleration": false,
+        "two_finger_scroll": true,
+        "natural_scroll": false,
+        "natural_hscroll": false,
+        "scroll_speed": 2,
+        "pinch_zoom": false,
+        "edge_slider": true,
+        "edge_side": "left",
+        "edge_target": "volume",
+        "edge_width": 5,
+        "tap_to_click": true,
+        "two_finger_tap_right": false,
+        "tap_drag": true,
+        "click_stabilize": true,
+        "rewind_mode": "always",
+        "click_gate": 6
+      }
+    }
+  ],
+  "pause_combo": [
+    "l1",
+    "r1",
+    "touchpad_click"
+  ],
+  "pause_dims_lightbar": true,
+  "lights": {
+    "enabled": true,
+    "color": [
+      0,
+      200,
+      190
+    ],
+    "effect": "steady",
+    "breathe_period": 4.0,
+    "brightness": 40,
+    "profile_flash": true,
+    "profile_flash_secs": 2,
+    "battery_on_player_leds": true,
+    "mic_led": true,
+    "mic_led_source": "system"
+  },
+  "keyboard_pause_hotkey": "",
+  "start_minimized": false,
+  "autostart": false,
+  "adaptive_triggers_master": true,
+  "conflict_warning": true,
+  "key_repeat": true,
+  "key_repeat_delay": 600,
+  "key_repeat_rate": 15,
+  "poll_hz": 400,
+  "pointer_hz": 350,
+  "on_disconnect": "wait",
+  "shared_hid": true,
+  "block_audio_autoswitch": true,
+  "audio_devices": []
+}

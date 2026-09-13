@@ -1,0 +1,30 @@
+# ============================================================
+#  換行符規則 —— 這個檔案不是可有可無的。
+#
+#  .bat 一旦被 git 轉成 LF 換行，cmd.exe 的行為就不可靠，
+#  而 tools/make_bats.py 的校驗器會直接判失敗。
+#  這裡把 .bat 鎖死成 CRLF，不管協作者的機器設定是什麼。
+# ============================================================
+
+# 預設：讓 git 自動判斷文字/二進位，倉庫內統一存 LF
+* text=auto
+
+# Windows 批次檔 —— 簽出時必須是 CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# 其餘文字檔統一 LF
+*.py   text eol=lf
+*.js   text eol=lf
+*.html text eol=lf
+*.json text eol=lf
+*.md   text eol=lf
+*.txt  text eol=lf
+
+# 二進位，永遠不要轉換
+*.png  binary
+*.ico  binary
+*.exe  binary
+*.zip  binary
+*.pyd  binary
+*.dll  binary
