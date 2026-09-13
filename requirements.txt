@@ -1,0 +1,16 @@
+# 全部装在项目目录下的 .venv 里，不碰系统 Python。
+# run.bat / build.bat 会自动建这个虚拟环境。
+
+# 核心
+hidapi>=0.14.0          # 读写 DualSense 的 HID 报告
+pywebview>=5.0          # 界面外壳，用 Windows 自带的 Edge WebView2 渲染
+typing_extensions>=4.12 # pywebview 需要；旧版 4.5 在 Python 3.12 上会崩
+pystray>=0.19.5         # 托盘图标
+Pillow>=10.0.0          # 托盘图标绘制
+
+# 可选：切换默认录音设备。装不上也能跑，只是这个功能会置灰
+pycaw>=20240210
+comtypes>=1.2.0
+
+# 仅打包时需要
+# pyinstaller>=6.0
